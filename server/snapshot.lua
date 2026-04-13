@@ -1,0 +1,1 @@
+-- WriteSeasonSnapshot, GetLastSnapshot
