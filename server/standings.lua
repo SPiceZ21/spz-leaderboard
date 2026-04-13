@@ -1,6 +1,8 @@
 function GetGlobalStandings(limit)
     limit = limit or Config.DefaultStandingsLimit
-    local cached = Cache.Get("standings:global:" .. limit)
+    if limit > Config.MaxStandingsLimit then limit = Config.MaxStandingsLimit end
+    local cacheKey = string.format("standings:global:%s", limit)
+    local cached = Cache.Get(cacheKey)
     if cached then return cached end
 
     local results = MySQL.Sync.fetchAll(
@@ -34,13 +36,15 @@ function GetGlobalStandings(limit)
         })
     end
 
-    Cache.Set("standings:global:" .. limit, standings, Config.StandingsCacheTTL)
+    Cache.Set(cacheKey, standings, Config.StandingsCacheTTL)
     return standings
 end
 
 function GetClassStandings(licenseTier, limit)
     limit = limit or Config.DefaultStandingsLimit
-    local cached = Cache.Get("standings:class:" .. licenseTier .. ":" .. limit)
+    if limit > Config.MaxStandingsLimit then limit = Config.MaxStandingsLimit end
+    local cacheKey = string.format("standings:class:%s:%s", licenseTier, limit)
+    local cached = Cache.Get(cacheKey)
     if cached then return cached end
 
     local results = MySQL.Sync.fetchAll(
@@ -76,7 +80,7 @@ function GetClassStandings(licenseTier, limit)
         })
     end
 
-    Cache.Set("standings:class:" .. licenseTier .. ":" .. limit, standings, Config.StandingsCacheTTL)
+    Cache.Set(cacheKey, standings, Config.StandingsCacheTTL)
     return standings
 end
 

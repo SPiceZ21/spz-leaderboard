@@ -20,5 +20,28 @@ AddEventHandler("SPZ:raceEnd", function(results)
 
     -- Bust the query cache so next leaderboard fetch is fresh
     Cache.Bust("standings")
-    Cache.Bust("records:" .. results.track)
+    Cache.Bust("records:" .. (results.track or ""))
+end)
+
+-- ── Callbacks ────────────────────────────────────────────────────────────
+
+SPZ.Callbacks.Register("spz-leaderboard:getGlobalStandings", function(source, cb, data)
+    cb(GetGlobalStandings(data.limit))
+end)
+
+SPZ.Callbacks.Register("spz-leaderboard:getClassStandings", function(source, cb, data)
+    cb(GetClassStandings(data.tier, data.limit))
+end)
+
+SPZ.Callbacks.Register("spz-leaderboard:getTrackRecords", function(source, cb, data)
+    cb(GetTrackRecords(data.track, data.carClass, data.limit))
+end)
+
+SPZ.Callbacks.Register("spz-leaderboard:getPlayerStats", function(source, cb, data)
+    local target = data.source or source
+    cb(GetPlayerStats(target))
+end)
+
+SPZ.Callbacks.Register("spz-leaderboard:getPlayerHistory", function(source, cb, data)
+    cb(GetPlayerHistory(source, data.page, data.pageSize))
 end)

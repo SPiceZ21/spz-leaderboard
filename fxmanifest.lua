@@ -1,9 +1,20 @@
 fx_version 'cerulean'
 game 'gta5'
 
+name 'spz-leaderboard'
+description 'SPiceZ-Core — Race results, track records, global standings'
+version '1.0.0'
+author 'SPiceZ-Core'
+
 lua54 'yes'
 
 shared_scripts {
+    '@spz-lib/shared/main.lua',
+    '@spz-lib/shared/logger.lua',
+    '@spz-lib/shared/table.lua',
+    '@spz-lib/shared/math.lua',
+    '@spz-lib/shared/timer.lua',
+    '@spz-lib/shared/callbacks.lua',
     'config.lua'
 }
 
@@ -21,6 +32,15 @@ server_scripts {
 
 client_scripts {
     'client/main.lua'
+}
+
+dependencies {
+    'spz-lib',
+    'spz-core',
+    'spz-identity',
+    'spz-races',
+    'spz-progression',
+    'oxmysql'
 }
 
 exports {

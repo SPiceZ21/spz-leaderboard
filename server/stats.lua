@@ -19,7 +19,10 @@ local function FormatHistoryRows(rows)
     return formatted
 end
 
-local function GetPlayerStats(source)
+function GetPlayerStats(source)
+    local cached = Cache.Get("stats:" .. source)
+    if cached then return cached end
+
     local profile = exports["spz-identity"]:GetProfile(source)
     if not profile then return nil end
 
@@ -90,7 +93,7 @@ local function GetPlayerStats(source)
     )
     local extra = playerFull[1] or {}
 
-    return {
+    local stats = {
         player_name    = profile.name,
         rank           = profile.rank,
         rank_name      = extra.rank_name or profile.rank_name or "Racer", 
@@ -112,9 +115,12 @@ local function GetPlayerStats(source)
         best_times     = bestTimes,
         recent_results = recentResults
     }
+
+    Cache.Set("stats:" .. source, stats, Config.StatsCacheTTL)
+    return stats
 end
 
-local function GetPlayerHistory(source, page, pageSize)
+function GetPlayerHistory(source, page, pageSize)
     pageSize = pageSize or Config.HistoryPageSize
     page     = page or 1
     local offset = (page - 1) * pageSize

@@ -1,4 +1,4 @@
-local function GetPersonalBest(source, track, carClass)
+function GetPersonalBest(source, track, carClass)
     local profile = exports["spz-identity"]:GetProfile(source)
     if not profile then return nil end
 
@@ -12,8 +12,10 @@ local function GetPersonalBest(source, track, carClass)
     return result and result[1] and result[1].best_time or nil
 end
 
-local function GetTrackRecords(track, carClass, limit)
-    limit = limit or 10
+function GetTrackRecords(track, carClass, limit)
+    limit = limit or Config.DefaultRecordsLimit
+    if limit > Config.MaxRecordsLimit then limit = Config.MaxRecordsLimit end
+    
     local cacheKey = string.format("records:track:%s:%s:%s", track, carClass, limit)
     local cached = Cache.Get(cacheKey)
     if cached then return cached end
@@ -43,12 +45,14 @@ local function GetTrackRecords(track, carClass, limit)
         })
     end
 
-    Cache.Set(cacheKey, formatted)
+    Cache.Set(cacheKey, formatted, Config.RecordsCacheTTL)
     return formatted
 end
 
-local function GetAllTrackRecords(carClass, limit)
-    limit = limit or 20
+function GetAllTrackRecords(carClass, limit)
+    limit = limit or Config.DefaultRecordsLimit
+    if limit > Config.MaxRecordsLimit then limit = Config.MaxRecordsLimit end
+    
     local cacheKey = string.format("records:all:%s:%s", carClass, limit)
     local cached = Cache.Get(cacheKey)
     if cached then return cached end
@@ -82,7 +86,7 @@ local function GetAllTrackRecords(carClass, limit)
         })
     end
 
-    Cache.Set(cacheKey, formatted)
+    Cache.Set(cacheKey, formatted, Config.RecordsCacheTTL)
     return formatted
 end
 
