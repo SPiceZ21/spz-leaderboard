@@ -1,4 +1,4 @@
-local function GetGlobalStandings(limit)
+function GetGlobalStandings(limit)
     limit = limit or Config.DefaultStandingsLimit
     local cached = Cache.Get("standings:global:" .. limit)
     if cached then return cached end
@@ -38,7 +38,7 @@ local function GetGlobalStandings(limit)
     return standings
 end
 
-local function GetClassStandings(licenseTier, limit)
+function GetClassStandings(licenseTier, limit)
     limit = limit or Config.DefaultStandingsLimit
     local cached = Cache.Get("standings:class:" .. licenseTier .. ":" .. limit)
     if cached then return cached end

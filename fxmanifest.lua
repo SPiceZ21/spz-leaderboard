@@ -15,6 +15,7 @@ server_scripts {
     'server/records.lua',
     'server/standings.lua',
     'server/stats.lua',
+    'server/snapshot.lua',
     'server/main.lua'
 }
 
@@ -32,5 +33,6 @@ exports {
     'GetGlobalStandings',
     'GetClassStandings',
     'GetPlayerStats',
-    'GetPlayerHistory'
+    'GetPlayerHistory',
+    'GetLastSnapshot'
 }
