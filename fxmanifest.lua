@@ -13,6 +13,7 @@ server_scripts {
     'server/cache.lua',
     'server/writer.lua',
     'server/records.lua',
+    'server/standings.lua',
     'server/main.lua'
 }
 
@@ -26,5 +27,7 @@ exports {
     'UpdateTrackRecord',
     'GetPersonalBest',
     'GetTrackRecords',
-    'GetAllTrackRecords'
+    'GetAllTrackRecords',
+    'GetGlobalStandings',
+    'GetClassStandings'
 }
