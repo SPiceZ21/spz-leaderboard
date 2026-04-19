@@ -17,31 +17,47 @@ function WriteRaceSession(results)
 end
 
 ---@param raceId string
----@param playerResult table
-function WriteResult(raceId, playerResult)
-    local profile = exports["spz-identity"]:GetProfile(playerResult.source)
-    if not profile then return end
+---@param players table  -- array of finisher + dnf entries from results
+function BulkWriteResults(raceId, players)
+    if not players or #players == 0 then return end
 
-    MySQL.Sync.execute(
-        [[INSERT INTO race_results
-          (race_id, player_id, position, finish_time, best_lap, lap_times,
-           points_earned, sr_change, irating_change, xp_earned, personal_best, dnf, dnf_reason)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]],
-        {
-            raceId,
-            profile.id,
-            playerResult.position or 99,
-            playerResult.finish_time,
-            playerResult.best_lap,
-            playerResult.lap_times and json.encode(playerResult.lap_times) or nil,
-            playerResult.points_earned or 0,
-            playerResult.sr_change or 0,
-            playerResult.irating_change or 0,
-            playerResult.xp_earned or 0,
-            playerResult.personal_best and 1 or 0,
-            playerResult.dnf and 1 or 0,
-            playerResult.dnf_reason,
-        }
+    local placeholderGroup = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    local placeholders = {}
+    local params = {}
+
+    for _, p in ipairs(players) do
+        local profile = exports["spz-identity"]:GetProfile(p.source)
+        if profile then
+            table.insert(placeholders, placeholderGroup)
+            local row = {
+                raceId,
+                profile.id,
+                p.position or 99,
+                p.finish_time,
+                p.best_lap,
+                p.lap_times and json.encode(p.lap_times) or nil,
+                p.points_earned or 0,
+                p.sr_change or 0,
+                p.irating_change or 0,
+                p.xp_earned or 0,
+                p.personal_best and 1 or 0,
+                p.dnf and 1 or 0,
+                p.dnf_reason,
+            }
+            for _, v in ipairs(row) do
+                table.insert(params, v)
+            end
+        end
+    end
+
+    if #placeholders == 0 then return end
+
+    MySQL.Async.execute(
+        "INSERT INTO race_results "
+        .. "(race_id, player_id, position, finish_time, best_lap, lap_times, "
+        .. "points_earned, sr_change, irating_change, xp_earned, personal_best, dnf, dnf_reason) "
+        .. "VALUES " .. table.concat(placeholders, ", "),
+        params
     )
 end
 
@@ -77,5 +93,5 @@ end
 
 -- Exports
 exports('WriteRaceSession', WriteRaceSession)
-exports('WriteResult', WriteResult)
+exports('BulkWriteResults', BulkWriteResults)
 exports('UpdateTrackRecord', UpdateTrackRecord)
