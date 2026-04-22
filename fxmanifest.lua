@@ -9,6 +9,7 @@ author 'SPiceZ-Core'
 lua54 'yes'
 
 shared_scripts {
+    'shared/init.lua',
     'config.lua'
 }
 
