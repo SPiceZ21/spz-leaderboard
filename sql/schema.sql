@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS track_records (
   best_lap      INT,                          -- fastest single lap ms (circuit only)
   set_at        TIMESTAMP   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-  -- FOREIGN KEY (player_id) REFERENCES players(id),
+  --  FOREIGN KEY (player_id) REFERENCES players(id)
   UNIQUE KEY uq_track_class_player (track, car_class, player_id),
   INDEX idx_track_class (track, car_class, best_time)   -- for leaderboard ORDER BY
 );
@@ -59,3 +59,15 @@ CREATE TABLE IF NOT EXISTS season_snapshots (
 
   INDEX idx_season (season_num)
 );
+
+-- MIGRATIONS / UPDATES for existing installations
+ALTER TABLE race_sessions ADD COLUMN IF NOT EXISTS track_type VARCHAR(16) NOT NULL AFTER track;
+ALTER TABLE race_sessions ADD COLUMN IF NOT EXISTS laps TINYINT NOT NULL AFTER track_type;
+
+ALTER TABLE race_results ADD COLUMN IF NOT EXISTS laps TINYINT NOT NULL AFTER best_lap;
+ALTER TABLE race_results ADD COLUMN IF NOT EXISTS sr_change FLOAT DEFAULT 0 AFTER points_earned;
+ALTER TABLE race_results ADD COLUMN IF NOT EXISTS irating_change INT DEFAULT 0 AFTER sr_change;
+ALTER TABLE race_results ADD COLUMN IF NOT EXISTS xp_earned INT DEFAULT 0 AFTER irating_change;
+
+ALTER TABLE track_records ADD COLUMN IF NOT EXISTS track_type VARCHAR(16) NOT NULL AFTER track;
+ALTER TABLE track_records ADD COLUMN IF NOT EXISTS best_lap INT AFTER best_time;
