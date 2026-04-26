@@ -1,0 +1,226 @@
+@font-face { font-family: 'Panchang'; src: url('fonts/Panchang-Variable.ttf') format('truetype'); font-weight: 100 900; }
+@import "../../spz-ui/theme.css";
+
+:root {
+  --banner-height: 80px;
+  --glass-bg: rgba(10, 10, 10, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  margin: 0;
+  font-family: var(--spz-font-body);
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  box-sizing: border-box;
+}
+
+.leaderboard-container {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.4));
+}
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--spz-radius-4, 12px);
+}
+
+/* Nametag Banner Styles */
+.nametag-banner {
+  height: var(--banner-height);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.nametag-banner::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 4px; height: 100%;
+  background: var(--spz-orange);
+}
+
+.nametag-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: var(--spz-surface-3);
+  margin-right: 16px;
+  border: 1px solid var(--spz-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--spz-font-display);
+  font-weight: 700;
+  color: var(--spz-orange);
+}
+
+.nametag-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.nametag-name {
+  font-family: var(--spz-font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--spz-fg-1);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+.nametag-subtitle {
+  font-family: var(--spz-font-mono);
+  font-size: 10px;
+  color: var(--spz-orange);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-top: -2px;
+}
+
+/* Leaderboard Table Professional Refinement */
+.leaderboard-table-wrap {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--spz-line-strong, rgba(255, 255, 255, 0.15));
+}
+
+.spz-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.spz-table th {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--spz-line-strong);
+  padding: 14px 20px;
+  font-family: var(--spz-font-mono, 'JetBrains Mono', monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--spz-fg-3, #5C6370);
+  text-align: left;
+}
+
+.spz-table td {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--spz-line-faint, rgba(255, 255, 255, 0.04));
+  vertical-align: middle;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.spz-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.spz-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.rank-cell {
+  font-family: var(--spz-font-display, 'Panchang', sans-serif);
+  font-weight: 800;
+  font-size: 16px;
+  width: 70px;
+  text-align: center;
+  border-right: 1px solid var(--spz-line-faint);
+}
+
+.rank-1 .rank-cell { color: var(--spz-orange); position: relative; }
+
+.player-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.player-name {
+  font-family: var(--spz-font-display);
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--spz-fg-1, #F0F2F5);
+}
+
+.player-meta {
+  font-family: var(--spz-font-mono);
+  font-size: 9px;
+  color: var(--spz-fg-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.vehicle-cell {
+  font-family: var(--spz-font-body);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--spz-fg-2, #A8AEBB);
+}
+
+.time-cell {
+  font-family: var(--spz-font-mono);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--spz-fg-1);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gap-cell {
+  font-family: var(--spz-font-mono);
+  font-size: 11px;
+  color: var(--spz-fg-3);
+  text-align: right;
+  width: 80px;
+}
+
+.rank-1 .time-cell { color: var(--spz-orange); }
+
+/* Status indicator in banner */
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(41, 211, 152, 0.1);
+  border: 1px solid rgba(41, 211, 152, 0.2);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--spz-success);
+  box-shadow: 0 0 8px var(--spz-success);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}

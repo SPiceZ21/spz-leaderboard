@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPZ · Leaderboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Libraries -->
+    <script src="https://unpkg.com/preact@latest/dist/preact.min.js"></script>
+    <script src="https://unpkg.com/preact@latest/hooks/dist/hooks.umd.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/framer-motion@11.0.0/dist/framer-motion.js"></script>
+
+    <!-- UI Logic -->
+    <script type="text/babel">
+        /** @jsx h */
+        const { h, render, Fragment } = preact;
+        const { useState, useEffect, useRef } = preactHooks;
+        const { motion, AnimatePresence } = FramerMotion;
+
+        /* ---------- Shared Components (Inlined for simplicity) ---------- */
+        function Icon({ name, size = 14, strokeWidth = 1.75, ...rest }) {
+            const ref = useRef(null);
+            useEffect(() => {
+                if (window.lucide && ref.current) window.lucide.createIcons({ nameAttr: 'data-lucide', icons: window.lucide.icons, attrs: {}, });
+            }, [name]);
+            return <i ref={ref} data-lucide={name} style={{ width: size, height: size, display: 'inline-flex', strokeWidth }} {...rest} />;
+        }
+
+        function Badge({ variant, children, ...rest }) {
+            return <span className="spz-badge" data-variant={variant} {...rest}>{children}</span>;
+        }
+
+        function Avatar({ initials, src, size = 28 }) {
+            return (
+                <span className="spz-avatar" style={{ width: size, height: size, fontSize: size <= 24 ? 10 : 11 }}>
+                    {src ? <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+                </span>
+            );
+        }
+
+        /* ---------- Leaderboard Components ---------- */
+        function NametagBanner({ name, subtitle = "TRACK LEADERBOARD", avatarText }) {
+            return (
+                <motion.div initial={{ x: -100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.6 }} className="nametag-banner glass-panel">
+                    <div className="nametag-avatar">{avatarText || <Icon name="flag" size={24} />}</div>
+                    <div className="nametag-info">
+                        <span className="nametag-subtitle">{subtitle}</span>
+                        <span className="nametag-name">{name}</span>
+                    </div>
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '24px' }}>
+                        <div style={{ textAlign: 'right' }}>
+                            <div className="nametag-subtitle">TELEMETRY</div>
+                            <div className="status-pill">
+                                <div className="status-dot"></div>
+                                <span style={{ color: 'var(--spz-success)', fontWeight: 700, fontSize: '11px', fontFamily: 'var(--spz-font-mono)' }}>LIVE</span>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+            );
+        }
+
+        function LeaderboardTable({ entries }) {
+            return (
+                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.6, delay: 0.1 }} className="leaderboard-table-wrap glass-panel">
+                    <table className="spz-table">
+                        <thead>
+                            <tr>
+                                <th style={{ textAlign: 'center', width: '60px' }}>POS</th>
+                                <th>DRIVER</th>
+                                <th>VEHICLE</th>
+                                <th style={{ textAlign: 'right' }}>GAP</th>
+                                <th style={{ textAlign: 'right' }}>LAP TIME</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <AnimatePresence>
+                                {entries.map((entry, index) => {
+                                    const gap = index === 0 ? '-' : `+${(Math.random() * 2).toFixed(3)}`;
+                                    const initials = entry.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                                    return (
+                                        <motion.tr key={index} initial={{ x: -10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.2, delay: 0.1 + (index * 0.03) }}>
+                                            <td className="rank-cell">
+                                                {entry.rank === 1 ? <Badge variant="solid" style={{ minWidth: '32px', justifyContent: 'center' }}>01</Badge> : <span style={{ opacity: 0.5 }}>{entry.rank.toString().padStart(2, '0')}</span>}
+                                            </td>
+                                            <td>
+                                                <div className="player-cell" style={{ flexDirection: 'row', alignItems: 'center', gap: '12px' }}>
+                                                    <Avatar initials={initials} src={entry.avatar} size={24} />
+                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                        <span className="player-name">{entry.name}</span>
+                                                        <span className="player-meta" style={{ fontSize: '9px', opacity: 0.5 }}>PRO DRIVER</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="vehicle-cell"><span style={{ opacity: 0.8 }}>{entry.vehicle}</span></td>
+                                            <td className="gap-cell" style={{ fontFamily: 'var(--spz-font-mono)', opacity: 0.5 }}>{gap}</td>
+                                            <td className="time-cell"><span style={{ color: entry.rank === 1 ? 'var(--spz-orange)' : 'var(--spz-fg-1)' }}>{entry.time}</span></td>
+                                        </motion.tr>
+                                    );
+                                })}
+                            </AnimatePresence>
+                        </tbody>
+                    </table>
+                </motion.div>
+            );
+        }
+
+        /* ---------- Main App ---------- */
+        function App() {
+            const [visible, setVisible] = useState(false);
+            const [trackName, setTrackName] = useState('Los Santos Circuit');
+            const [entries, setEntries] = useState([]);
+
+            useEffect(() => {
+                const handleMessage = (event) => {
+                    const { action, data } = event.data;
+                    if (action === 'showLeaderboard') {
+                        setTrackName(data.trackName || 'Unknown Track');
+                        setEntries(data.entries || []);
+                        setVisible(true);
+                    } else if (action === 'hideLeaderboard') {
+                        setVisible(false);
+                    }
+                };
+                window.addEventListener('message', handleMessage);
+                const handleKeyDown = (e) => {
+                    if (e.key === 'Escape' && visible) {
+                        setVisible(false);
+                        fetch(`https://spz-leaderboard/close`, { method: 'POST' });
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => {
+                    window.removeEventListener('message', handleMessage);
+                    window.removeEventListener('keydown', handleKeyDown);
+                };
+            }, [visible]);
+
+            if (!visible) return null;
+
+            return (
+                <div id="app">
+                    <div className="leaderboard-container">
+                        <NametagBanner name={trackName} />
+                        <LeaderboardTable entries={entries} />
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', fontFamily: 'var(--spz-font-mono)', fontSize: '10px', color: 'var(--spz-fg-4)' }}>
+                            <span>[ESC] TO CLOSE</span>
+                            <span style={{ color: 'var(--spz-line)' }}>|</span>
+                            <span>SPICEZ-CORE COMPETITIVE</span>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
