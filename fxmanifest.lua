@@ -3,7 +3,7 @@ game 'gta5'
 
 name 'spz-leaderboard'
 description 'SPiceZ-Core — Race results, track records, global standings'
-version '1.0.0'
+version '1.1.3'
 author 'SPiceZ-Core'
 
 lua54 'yes'
@@ -29,12 +29,10 @@ client_scripts {
     'client/main.lua'
 }
 
-ui_page 'ui/index.html'
+ui_page 'ui/dist/index.html'
 
 files {
-    'ui/index.html',
-    'ui/style.css',
-    'ui/fonts/*.ttf'
+    'ui/dist/**/*',
 }
 
 dependencies {
