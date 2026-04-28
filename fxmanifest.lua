@@ -3,7 +3,7 @@ game 'gta5'
 
 name 'spz-leaderboard'
 description 'SPiceZ-Core â€” Race results, track records, global standings'
-version '1.1.4'
+version '1.1.5'
 author 'SPiceZ-Core'
 
 lua54 'yes'
