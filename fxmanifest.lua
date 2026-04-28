@@ -1,8 +1,8 @@
-fx_version 'cerulean'
+﻿fx_version 'cerulean'
 game 'gta5'
 
 name 'spz-leaderboard'
-description 'SPiceZ-Core — Race results, track records, global standings'
+description 'SPiceZ-Core â€” Race results, track records, global standings'
 version '1.1.3'
 author 'SPiceZ-Core'
 
@@ -57,3 +57,4 @@ exports {
     'GetPlayerHistory',
     'GetLastSnapshot'
 }
+
