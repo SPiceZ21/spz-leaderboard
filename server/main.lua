@@ -40,3 +40,42 @@ end)
 SPZ.Callbacks.Register("spz-leaderboard:getPlayerHistory", function(source, cb, data)
     cb(GetPlayerHistory(source, data.page, data.pageSize))
 end)
+
+RegisterCommand('leaderboard', function(source)
+    local standings = GetGlobalStandings(10)
+    local tracks = GetTracks()
+    local defaultTrack = tracks[1] and tracks[1].id or "Vespucci Sprints"
+    local records = GetTrackRecords(defaultTrack, "S", 10)
+
+    -- Map standings to UI format
+    local points = {}
+    for _, s in ipairs(standings) do
+        table.insert(points, {
+            rank = s.position,
+            name = s.player_name,
+            points = s.alltime_points,
+            wins = 0, -- Needs to be added to DB/logic if required
+            avatar = nil
+        })
+    end
+
+    -- Map records to UI format
+    local timetrial = {}
+    for _, r in ipairs(records) do
+        table.insert(timetrial, {
+            rank = r.position,
+            name = r.player_name,
+            vehicle = "Vehicle", -- Should be in records if possible
+            time = r.best_time_f,
+            track = defaultTrack,
+            avatar = nil
+        })
+    end
+
+    TriggerClientEvent('SPZ:showLeaderboard', source, {
+        points = points,
+        timetrial = timetrial,
+        tracks = tracks,
+        defaultTab = 'points'
+    })
+end, false)

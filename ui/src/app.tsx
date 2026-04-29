@@ -1,26 +1,31 @@
-import { useState, useEffect } from 'preact/hooks'
-import { Flag } from 'lucide-preact'
+import { useState, useEffect, useMemo } from 'preact/hooks'
+import { Flag, Trophy, Timer, MapPin, ChevronDown } from 'lucide-preact'
 import { Badge } from './components/Badge'
+import { Tabs } from './components/Tabs'
 import './components/Badge.css'
 import './components/Avatar.css'
+import './components/Tabs.css'
 
 interface LeaderboardEntry {
   rank: number
   name: string
-  vehicle: string
-  time: string
+  vehicle?: string
+  time?: string
+  points?: number
+  wins?: number
   avatar?: string
+  track?: string
 }
 
-function NametagBanner({ name }: { name: string }) {
+function NametagBanner({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div class="nametag-banner">
       <div class="nametag-avatar">
         <Flag size={24} />
       </div>
       <div class="nametag-info">
-        <span class="nametag-subtitle">Track Leaderboard</span>
-        <span class="nametag-name">{name}</span>
+        <span class="nametag-subtitle">{subtitle}</span>
+        <span class="nametag-name">{title}</span>
       </div>
       <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
         <div class="nametag-subtitle">Telemetry</div>
@@ -35,13 +40,10 @@ function NametagBanner({ name }: { name: string }) {
   )
 }
 
-function LeaderboardRow({ entry, index }: { entry: LeaderboardEntry; index: number }) {
+function LeaderboardRow({ entry, index, type }: { entry: LeaderboardEntry; index: number; type: 'points' | 'timetrial' }) {
   const initials = entry.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
   const isLeader = entry.rank === 1
-  const gap = index === 0
-    ? <span style={{ opacity: 0.3 }}>—</span>
-    : `+${(index * 0.421 + Math.random() * 0.3).toFixed(3)}`
-
+  
   return (
     <tr class="leaderboard-row-animate" style={{ animationDelay: `${0.08 + index * 0.03}s` }}>
       <td class="rank-cell">
@@ -59,28 +61,44 @@ function LeaderboardRow({ entry, index }: { entry: LeaderboardEntry; index: numb
           </span>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span class="player-name">{entry.name}</span>
-            <span class="player-meta">Pro Driver</span>
+            <span class="player-meta">{type === 'points' ? 'Competitive' : 'Time Trial'}</span>
           </div>
         </div>
       </td>
-      <td class="vehicle-cell">{entry.vehicle}</td>
-      <td class="gap-cell">{gap}</td>
-      <td class={`time-cell${isLeader ? ' leader' : ''}`}>{entry.time}</td>
+      {type === 'timetrial' ? (
+        <>
+          <td class="vehicle-cell">{entry.vehicle || '—'}</td>
+          <td class={`time-cell${isLeader ? ' leader' : ''}`}>{entry.time}</td>
+        </>
+      ) : (
+        <>
+          <td class="stat-cell" style={{ textAlign: 'right' }}>{entry.wins ?? 0}</td>
+          <td class="points-cell" style={{ textAlign: 'right' }}>
+            <span class="points-value">{entry.points ?? 0}</span>
+            <span class="points-label">PTS</span>
+          </td>
+        </>
+      )}
     </tr>
   )
 }
 
 export function App() {
   const [visible, setVisible] = useState(false)
-  const [trackName, setTrackName] = useState('Los Santos Circuit')
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([])
+  const [activeTab, setActiveTab] = useState('points')
+  const [trackFilter, setTrackFilter] = useState('all')
+  const [pointEntries, setPointEntries] = useState<LeaderboardEntry[]>([])
+  const [timeTrialEntries, setTimeTrialEntries] = useState<LeaderboardEntry[]>([])
+  const [tracks, setTracks] = useState<{id: string, name: string}[]>([])
 
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       const { action, data } = e.data
       if (action === 'showLeaderboard') {
-        setTrackName(data.trackName || 'Unknown Track')
-        setEntries(data.entries || [])
+        if (data.points) setPointEntries(data.points)
+        if (data.timetrial) setTimeTrialEntries(data.timetrial)
+        if (data.tracks) setTracks(data.tracks)
+        if (data.defaultTab) setActiveTab(data.defaultTab)
         setVisible(true)
       } else if (action === 'hideLeaderboard') {
         setVisible(false)
@@ -100,30 +118,93 @@ export function App() {
     }
   }, [visible])
 
+  const filteredEntries = useMemo(() => {
+    if (activeTab === 'points') return pointEntries
+    if (trackFilter === 'all') return timeTrialEntries
+    return timeTrialEntries.filter(e => e.track === trackFilter)
+  }, [activeTab, trackFilter, pointEntries, timeTrialEntries])
+
   if (!visible) return null
+
+  const tabs = [
+    { id: 'points', label: 'Points Standings', icon: Trophy },
+    { id: 'timetrial', label: 'Time Trial', icon: Timer },
+  ]
 
   return (
     <div id="app">
       <div class="leaderboard-container">
-        <NametagBanner name={trackName} />
+        <NametagBanner 
+          subtitle="Spicez Competitive" 
+          title={activeTab === 'points' ? 'Global Standings' : 'Track Records'} 
+        />
+        
+        <div class="leaderboard-controls">
+          <Tabs 
+            tabs={tabs} 
+            activeTab={activeTab} 
+            onChange={setActiveTab} 
+            variant="pills"
+          />
+          
+          {activeTab === 'timetrial' && (
+            <div class="filter-wrapper">
+              <MapPin size={14} class="filter-icon" />
+              <select 
+                class="track-select" 
+                value={trackFilter} 
+                onChange={(e) => setTrackFilter((e.target as HTMLSelectElement).value)}
+              >
+                <option value="all">All Tracks</option>
+                {tracks.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} class="select-chevron" />
+            </div>
+          )}
+        </div>
+
         <div class="leaderboard-table-wrap">
           <table class="spz-table">
             <thead>
-              <tr>
-                <th style={{ textAlign: 'center', width: 60 }}>Pos</th>
-                <th>Driver</th>
-                <th>Vehicle</th>
-                <th style={{ textAlign: 'right' }}>Gap</th>
-                <th style={{ textAlign: 'right' }}>Lap Time</th>
-              </tr>
+              {activeTab === 'points' ? (
+                <tr>
+                  <th style={{ textAlign: 'center', width: 60 }}>Pos</th>
+                  <th>Driver</th>
+                  <th style={{ textAlign: 'right' }}>Wins</th>
+                  <th style={{ textAlign: 'right' }}>Points</th>
+                </tr>
+              ) : (
+                <tr>
+                  <th style={{ textAlign: 'center', width: 60 }}>Pos</th>
+                  <th>Driver</th>
+                  <th>Vehicle</th>
+                  <th style={{ textAlign: 'right' }}>Time</th>
+                </tr>
+              )}
             </thead>
             <tbody>
-              {entries.map((entry, i) => (
-                <LeaderboardRow key={entry.rank} entry={entry} index={i} />
-              ))}
+              {filteredEntries.length > 0 ? (
+                filteredEntries.map((entry, i) => (
+                  <LeaderboardRow 
+                    key={`${activeTab}-${entry.rank}-${i}`} 
+                    entry={entry} 
+                    index={i} 
+                    type={activeTab as 'points' | 'timetrial'}
+                  />
+                ))
+              ) : (
+                <tr>
+                  <td colspan={4} style={{ textAlign: 'center', padding: '40px', opacity: 0.5 }}>
+                    No entries found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+
         <div class="leaderboard-hint">
           <span>[ESC] To Close</span>
           <span class="sep">|</span>
@@ -133,3 +214,4 @@ export function App() {
     </div>
   )
 }
+

@@ -147,6 +147,90 @@
   animation: leaderboard-row-in 300ms var(--anim-ease) both;
 }
 
+.leaderboard-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--gray-950);
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--gray-800);
+}
+
+.filter-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--gray-900);
+  border: 1px solid var(--gray-700);
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 36px;
+  transition: all 0.2s var(--anim-ease);
+}
+
+.filter-wrapper:hover {
+  border-color: var(--color-primary);
+  background: var(--gray-800);
+}
+
+.filter-icon {
+  color: var(--gray-500);
+  margin-right: 8px;
+}
+
+.track-select {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--gray-200);
+  font-family: var(--font-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  padding-right: 24px;
+  cursor: pointer;
+  outline: none;
+  width: 160px;
+}
+
+.select-chevron {
+  position: absolute;
+  right: 12px;
+  pointer-events: none;
+  color: var(--gray-500);
+}
+
+.stat-cell {
+  font-family: var(--font-mono);
+  color: var(--gray-400);
+  font-weight: 500;
+}
+
+.points-cell {
+  text-align: right;
+}
+
+.points-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--color-primary);
+}
+
+.points-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--gray-500);
+  margin-left: 4px;
+  letter-spacing: 0.05em;
+}
+
+.leaderboard-row-animate:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .leaderboard-hint {
   display: flex;
   align-items: center;
@@ -157,5 +241,6 @@
   color: var(--gray-600);
   text-transform: uppercase;
   justify-content: center;
+  margin-top: 8px;
 }
 .sep { opacity: 0.3; }

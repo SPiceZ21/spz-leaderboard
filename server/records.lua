@@ -90,7 +90,13 @@ function GetAllTrackRecords(carClass, limit)
     return formatted
 end
 
+function GetTracks()
+    local results = MySQL.Sync.fetchAll("SELECT DISTINCT track as id, track as name FROM track_records ORDER BY track ASC")
+    return results
+end
+
 -- Exports
 exports('GetPersonalBest', GetPersonalBest)
 exports('GetTrackRecords', GetTrackRecords)
 exports('GetAllTrackRecords', GetAllTrackRecords)
+exports('GetTracks', GetTracks)

@@ -18,11 +18,20 @@ end)
 -- Test Command
 RegisterCommand('testleaderboard', function()
     SetLeaderboardVisible(true, {
-        trackName = "Vespucci Sprints",
-        entries = {
-            { rank = 1, name = "SPiceZ", vehicle = "T20", time = "01:05.123", date = "2026-04-26" },
-            { rank = 2, name = "User123", vehicle = "Zentorno", time = "01:06.456", date = "2026-04-26" },
-            { rank = 3, name = "RacerX", vehicle = "Jester", time = "01:07.789", date = "2026-04-25" }
+        defaultTab = "points",
+        points = {
+            { rank = 1, name = "SPiceZ", points = 1250, wins = 12 },
+            { rank = 2, name = "User123", points = 1100, wins = 8 },
+            { rank = 3, name = "RacerX", points = 950, wins = 5 }
+        },
+        timetrial = {
+            { rank = 1, name = "SPiceZ", vehicle = "T20", time = "01:05.123", track = "track1" },
+            { rank = 2, name = "User123", vehicle = "Zentorno", time = "01:06.456", track = "track1" },
+            { rank = 3, name = "RacerX", vehicle = "Jester", time = "01:07.789", track = "track2" }
+        },
+        tracks = {
+            { id = "track1", name = "Los Santos Circuit" },
+            { id = "track2", name = "Vespucci Sprints" }
         }
     })
 end, false)
