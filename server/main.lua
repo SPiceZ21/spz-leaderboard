@@ -82,6 +82,7 @@ end, false)
 
 RegisterNetEvent('SPZ:leaderboard:request', function()
     local source = source
+    print("[DEBUG] Leaderboard request received on server for source:", source)
     local standings = GetGlobalStandings(10)
     local tracks = GetTracks()
     local defaultTrack = tracks[1] and tracks[1].id or "Vespucci Sprints"

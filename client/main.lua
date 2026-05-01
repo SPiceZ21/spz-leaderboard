@@ -1,4 +1,5 @@
 -- SPZ Leaderboard Client
+print("[spz-leaderboard] Client script initialized")
 local isVisible = false
 
 function SetLeaderboardVisible(visible, data)
@@ -38,5 +39,6 @@ end, false)
 
 -- Event listener for real data
 RegisterNetEvent('SPZ:showLeaderboard', function(data)
+    print("[DEBUG] Received SPZ:showLeaderboard event on client")
     SetLeaderboardVisible(true, data)
 end)
