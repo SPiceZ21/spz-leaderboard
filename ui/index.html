@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SPZ Leaderboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="root" class="hidden">
+    <div class="tablet">
+      <!-- header -->
+      <div class="lb-head">
+        <div class="lb-brand">
+          <span class="lb-title">LEADERBOARD</span>
+          <span class="lb-sub">SPiceZ Racing</span>
+        </div>
+        <button id="closeBtn" class="lb-close">✕</button>
+      </div>
+
+      <!-- tabs -->
+      <div class="lb-tabs" id="tabs">
+        <button class="tab active" data-tab="standings">Standings</button>
+        <button class="tab" data-tab="classes">Classes</button>
+        <button class="tab" data-tab="records">Records</button>
+        <button class="tab" data-tab="activity">Activity</button>
+        <button class="tab" data-tab="me">My Stats</button>
+      </div>
+
+      <!-- class picker (only on Classes tab) -->
+      <div class="lb-classpick hidden" id="classpick">
+        <button class="cls-btn active" data-cls="S">S</button>
+        <button class="cls-btn" data-cls="A">A</button>
+        <button class="cls-btn" data-cls="B">B</button>
+        <button class="cls-btn" data-cls="C">C</button>
+        <button class="cls-btn" data-cls="D">D</button>
+      </div>
+
+      <!-- content -->
+      <div class="lb-body" id="body">
+        <div class="lb-loading">Loading…</div>
+      </div>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
