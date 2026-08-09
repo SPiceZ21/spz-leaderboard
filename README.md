@@ -1,18 +1,33 @@
 # spz-leaderboard
-> Leaderboard UI for races
 
-## Scripts
+> Leaderboard tablet — standings, class tables, records, activity · `v1.0.0`
 
-| Side   | File              | Purpose                                               |
-| ------ | ----------------- | ----------------------------------------------------- |
-| Client | `client/main.lua` | NUI integration and events                            |
-| UI     | `ui/index.html`   | User interface layout                                 |
-| UI     | `ui/script.js`    | User interface logic                                  |
-| UI     | `ui/style.css`    | User interface styling                                |
+## Overview
+
+`spz-leaderboard` is the front end only. It opens a tablet-style NUI and renders data
+fetched from the leaderboard back end that lives in
+[spz-races](../spz-races/README.md) (`server/leaderboard/`): global standings, per-class
+tables, per-track records and recent session activity.
+
+## Structure
+
+| Side | File | Purpose |
+|---|---|---|
+| Client | `client/main.lua` | NUI bridge, data callbacks, open/close |
+| UI | `ui/index.html` | Layout |
+| UI | `ui/script.js` | Tab logic and rendering |
+| UI | `ui/style.css` | Styling |
+
+## Commands
+
+| Command | Effect |
+|---|---|
+| `/leaderboard` | Open the leaderboard tablet |
 
 ## Dependencies
-- ox_lib
-- spz-core
 
-## CI
-Built and released via `.github/workflows/release.yml` on push to `main`.
+`ox_lib` · `spz-races`
+
+---
+
+Part of [SPiceZ-Core](../README.md) · GPL-3.0
