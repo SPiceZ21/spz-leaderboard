@@ -7,6 +7,13 @@ const classpick = document.getElementById('classpick');
 
 let activeTab = 'standings';
 let activeClass = 'S';
+let lastData = [];
+let filterText = '';
+
+const searchbar    = document.getElementById('searchbar');
+const searchInput  = document.getElementById('searchInput');
+const searchCount  = document.getElementById('searchCount');
+const SEARCHABLE = { standings: true, classes: true, records: true };
 
 const RES = () => (typeof GetParentResourceName === 'function' ? GetParentResourceName() : 'spz-leaderboard');
 const inNui = () => typeof GetParentResourceName === 'function';
@@ -170,16 +177,42 @@ const RENDER = {
   me:        renderMe,
 };
 
+// ── Filtering ─────────────────────────────────────────────────────────────────
+function matches(r, f) {
+  if (!f) return true;
+  const hay = (activeTab === 'records')
+    ? ((r.track_name || r.track || '') + ' ' + (r.player_name || r.holder || ''))
+    : (r.name || '');
+  return hay.toLowerCase().includes(f);
+}
+
+function renderCurrent() {
+  // Non-searchable tabs (My Stats is an object, not a list) render as-is.
+  if (!SEARCHABLE[activeTab] || !Array.isArray(lastData)) {
+    body.innerHTML = RENDER[activeTab](lastData);
+    return;
+  }
+  const rows = lastData;
+  const filtered = filterText ? rows.filter(r => matches(r, filterText)) : rows;
+  body.innerHTML = RENDER[activeTab](filtered);
+  if (searchCount) searchCount.textContent = filterText ? `${filtered.length}/${rows.length}` : '';
+}
+
 // ── Load a tab ───────────────────────────────────────────────────────────────
 async function loadTab() {
   classpick.classList.toggle('hidden', activeTab !== 'classes' && activeTab !== 'records');
+  searchbar.classList.toggle('hidden', !SEARCHABLE[activeTab]);
+  filterText = '';
+  if (searchInput) searchInput.value = '';
+  if (searchCount) searchCount.textContent = '';
+
   body.innerHTML = `
     <div class="lb-loading">
       <div class="spinner"></div>
       <span>Loading Telemetry...</span>
     </div>`;
-  const data = await fetchTab(activeTab, activeClass);
-  body.innerHTML = RENDER[activeTab](data);
+  lastData = await fetchTab(activeTab, activeClass);
+  renderCurrent();
 }
 
 // ── Event Handlers ────────────────────────────────────────────────────────────
@@ -204,6 +237,13 @@ classpick.addEventListener('click', e => {
 function close() {
   root.classList.add('hidden');
   if (inNui()) fetch(`https://${RES()}/lbClose`, { method: 'POST', body: '{}' }).catch(() => {});
+}
+
+if (searchInput) {
+  searchInput.addEventListener('input', e => {
+    filterText = String(e.target.value || '').trim().toLowerCase();
+    renderCurrent();
+  });
 }
 
 document.getElementById('closeBtn').addEventListener('click', close);

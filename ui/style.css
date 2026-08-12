@@ -443,3 +443,60 @@ html, body {
   color: var(--gray-3);
   margin-top: 8px;
 }
+
+/* ═══ Game-ready polish ═══════════════════════════════════════════════════ */
+
+/* Search bar */
+.lb-search { display: flex; align-items: center; gap: 9px; padding: 10px 20px; border-bottom: 1px solid var(--line); }
+.lb-search > svg { width: 15px; height: 15px; color: var(--gray-4); flex-shrink: 0; }
+.lb-search input { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; color: var(--gray-1); font-size: 13px; font-family: var(--font-body); outline: none; transition: border-color .15s; }
+.lb-search input:focus { border-color: var(--line-strong); background: var(--panel-hover); }
+.lb-search input::placeholder { color: var(--gray-4); }
+.search-count { font-family: var(--font-disp); font-size: 11px; color: var(--gray-4); min-width: 46px; text-align: right; }
+.lb-search.hidden { display: none; }
+
+/* Podium medals (top 3) — NO side line, just a soft tint + gradient medal */
+.row.top1 { background: linear-gradient(100deg, rgba(245,158,11,0.10), transparent 55%); }
+.row.top2 { background: linear-gradient(100deg, rgba(148,163,184,0.09), transparent 55%); }
+.row.top3 { background: linear-gradient(100deg, rgba(217,119,6,0.09), transparent 55%); }
+.row.top1 .rk, .row.top2 .rk, .row.top3 .rk {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%; margin: 0 auto;
+  font-family: var(--font-disp); font-weight: 800; font-size: 13px; color: #0a0a0a;
+}
+.row.top1 .rk { background: linear-gradient(135deg, #ffde85, var(--gold)); box-shadow: 0 0 13px rgba(245,158,11,0.5); }
+.row.top2 .rk { background: linear-gradient(135deg, #e6edf5, var(--silver)); }
+.row.top3 .rk { background: linear-gradient(135deg, #f2b874, var(--bronze)); }
+
+/* Row entrance stagger */
+@keyframes rowIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+.row { animation: rowIn .3s cubic-bezier(.16,1,.3,1) both; }
+.row:nth-child(2){animation-delay:.02s} .row:nth-child(3){animation-delay:.05s} .row:nth-child(4){animation-delay:.08s}
+.row:nth-child(5){animation-delay:.11s} .row:nth-child(6){animation-delay:.14s} .row:nth-child(7){animation-delay:.17s}
+.row:nth-child(8){animation-delay:.20s} .row:nth-child(9){animation-delay:.23s} .row:nth-child(n+10){animation-delay:.26s}
+
+/* My-stats cards + records + tab body fade */
+.lb-body { animation: rowIn .28s ease both; }
+
+/* Compact + modular tightening */
+.row { gap: 12px; padding: 9px 13px; border-radius: 9px; margin-bottom: 5px; }
+.table-header { padding: 6px 13px; font-size: 10px; margin-bottom: 6px; letter-spacing: 0.08em; }
+.lb-search { padding: 8px 16px; }
+.lb-search input { padding: 6px 11px; font-size: 12px; }
+.row.top1 .rk, .row.top2 .rk, .row.top3 .rk { width: 24px; height: 24px; font-size: 12px; }
+
+/* Compact overall shell */
+.tablet { width: 70vw; height: 82vh; max-width: 1060px; max-height: 780px; }
+.lb-head { padding: 16px 24px; }
+.lb-nav { padding: 14px 24px 0; gap: 10px; }
+.lb-body-wrapper { padding: 14px 24px 20px; }
+.tab { padding: 9px 16px; font-size: 13px; }
+.lb-classpick { padding-bottom: 12px; }
+
+/* Smaller header, no logo badge */
+.lb-head { padding: 12px 22px; }
+.lb-title { font-size: 16px; letter-spacing: 0.06em; }
+.lb-sub { font-size: 9px; letter-spacing: 0.2em; }
+
+/* Wider tablet */
+.tablet { width: 86vw; max-width: 1400px; }
