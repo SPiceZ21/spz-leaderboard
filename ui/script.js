@@ -37,6 +37,15 @@ async function fetchTab(tab, cls) {
 // ── Renderers ────────────────────────────────────────────────────────────────
 function topClass(i) { return i === 1 ? 'top1' : i === 2 ? 'top2' : i === 3 ? 'top3' : ''; }
 
+// Top-3 get the winged trophy emblem; everyone else a plain rank number.
+const MEDAL = { 1: 'gold', 2: 'silver', 3: 'brozen' };
+function rankCell(rk) {
+  const m = MEDAL[rk];
+  return m
+    ? `<div class="rk rk-medal"><img src="Assets/${m}.png" alt="#${rk}" draggable="false"></div>`
+    : `<div class="rk">${rk}</div>`;
+}
+
 function renderStandings(rows) {
   if (!rows || !rows.length) return `<div class="lb-empty"><span>No standings recorded yet.</span></div>`;
   
@@ -61,7 +70,7 @@ function renderStandings(rows) {
     const pts = fmtNum(r.points || 0);
 
     return `<div class="row ${topClass(rk)}">
-      <div class="rk">${rk}</div>
+      ${rankCell(rk)}
       <div class="who">
         <div class="nm">${name}</div>
         <div class="meta">${title} · LVL ${lvl}</div>
@@ -97,7 +106,7 @@ function renderClasses(rows) {
     const pts = fmtNum(r.points || 0);
 
     return `<div class="row ${topClass(rk)}">
-      <div class="rk">${rk}</div>
+      ${rankCell(rk)}
       <div class="who">
         <div class="nm">${name}</div>
         <div class="meta">${races} races driven</div>

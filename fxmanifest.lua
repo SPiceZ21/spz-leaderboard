@@ -17,6 +17,8 @@ files {
     'ui/index.html',
     'ui/style.css',
     'ui/script.js',
+    'ui/Assets/*.png',
+    'ui/fonts/*.ttf',
 }
 
 dependencies {
