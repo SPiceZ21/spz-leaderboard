@@ -258,10 +258,29 @@ if (searchInput) {
 document.getElementById('closeBtn').addEventListener('click', close);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 
+// Base theme (server.cfg spz_theme_* convars, pushed from spz-core).
+const THEME_VARS = { accent: '--accent', bg: '--bg', bg2: '--bg-card', gold: '--gold' };
+const THEME_RGB_VARS = { accent: '--accent-rgb' };
+function hexToRgbTriplet(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+  return m ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` : null;
+}
+function applyTheme(theme) {
+  if (!theme) return;
+  for (const key in THEME_VARS) {
+    if (theme[key]) document.documentElement.style.setProperty(THEME_VARS[key], theme[key]);
+  }
+  for (const key in THEME_RGB_VARS) {
+    const rgb = theme[key] && hexToRgbTriplet(theme[key]);
+    if (rgb) document.documentElement.style.setProperty(THEME_RGB_VARS[key], rgb);
+  }
+}
+
 window.addEventListener('message', e => {
   const m = e.data || {};
   if (m.action === 'open') { root.classList.remove('hidden'); loadTab(); }
   else if (m.action === 'close') { root.classList.add('hidden'); }
+  else if (m.action === 'theme') { applyTheme(m.theme); }
 });
 
 // ── Browser preview mock ─────────────────────────────────────────────────────

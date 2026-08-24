@@ -1,6 +1,18 @@
 -- client/main.lua
 local isOpen = false
 
+-- Base theme (server.cfg spz_theme_* convars via spz-core).
+local function pushLeaderboardTheme(theme)
+    if theme and next(theme) then
+        SendNUIMessage({ action = 'theme', theme = theme })
+    end
+end
+CreateThread(function()
+    local ok, theme = pcall(function() return exports['spz-core']:GetTheme() end)
+    if ok then pushLeaderboardTheme(theme) end
+end)
+AddEventHandler('SPZ:themeUpdated', function(theme) pushLeaderboardTheme(theme) end)
+
 local function openBoard()
     if isOpen then return end
     isOpen = true

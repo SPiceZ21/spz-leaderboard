@@ -12,11 +12,12 @@
   --panel:        rgba(255, 255, 255, 0.025);
   --panel-hover:  rgba(255, 255, 255, 0.05);
   --line:         rgba(255, 255, 255, 0.07);
-  --line-strong:  rgba(255, 98, 0, 0.25);
-  
+  --line-strong:  rgba(var(--accent-rgb), 0.25);
+
   --accent:       #ff6200;
-  --accent-glow:  rgba(255, 98, 0, 0.35);
-  --orange:       #ff6200;
+  --accent-rgb:   255, 98, 0;
+  --accent-glow:  rgba(var(--accent-rgb), 0.35);
+  --orange:       var(--accent);
   --green:        #10b981;
   --gold:         #f59e0b;
   --silver:       #94a3b8;
@@ -61,7 +62,7 @@ html, body {
   background: var(--bg);
   border: 1px solid var(--line-strong);
   border-radius: 20px;
-  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.95), 0 0 50px rgba(255, 98, 0, 0.12);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.95), 0 0 50px rgba(var(--accent-rgb), 0.12);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -79,7 +80,7 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 22px 32px;
-  background: rgba(255, 98, 0, 0.02);
+  background: rgba(var(--accent-rgb), 0.02);
   border-bottom: 1px solid var(--line);
 }
 
@@ -90,7 +91,7 @@ html, body {
 }
 
 .lb-logo-badge {
-  background: linear-gradient(135deg, #ff6200, #cc4e00);
+  background: linear-gradient(135deg, var(--accent), #cc4e00);
   color: #fff;
   font-family: var(--font-disp);
   font-size: 14px;
@@ -139,7 +140,7 @@ html, body {
 }
 
 .lb-close:hover {
-  background: rgba(255, 98, 0, 0.2);
+  background: rgba(var(--accent-rgb), 0.2);
   border-color: var(--orange);
   color: var(--orange);
   box-shadow: 0 0 15px var(--accent-glow);
@@ -199,7 +200,7 @@ html, body {
 .tab.active {
   color: #fff;
   border-bottom-color: var(--orange);
-  background: rgba(255, 98, 0, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 
 .tab.active .tab-icon {
@@ -244,7 +245,7 @@ html, body {
 
 .cls-btn.active { color: #000; }
 .cls-btn.active[data-cls="S"] { background: #f59e0b; border-color: #f59e0b; box-shadow: 0 0 12px rgba(245, 158, 11, 0.4); }
-.cls-btn.active[data-cls="A"] { background: #ff6200; border-color: #ff6200; box-shadow: 0 0 12px rgba(255, 98, 0, 0.4); }
+.cls-btn.active[data-cls="A"] { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.4); }
 .cls-btn.active[data-cls="B"] { background: #06b6d4; border-color: #06b6d4; box-shadow: 0 0 12px rgba(6, 182, 212, 0.4); }
 .cls-btn.active[data-cls="C"] { background: #10b981; border-color: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.4); }
 .cls-btn.active[data-cls="D"] { background: #a1a1aa; border-color: #a1a1aa; box-shadow: 0 0 12px rgba(161, 161, 170, 0.4); }
@@ -320,7 +321,7 @@ html, body {
 
 .row:hover {
   background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 98, 0, 0.4);
+  border-color: rgba(var(--accent-rgb), 0.4);
   transform: translateX(4px);
 }
 
@@ -381,7 +382,7 @@ html, body {
 }
 
 .chip.S { color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1); }
-.chip.A { color: #ff6200; border-color: rgba(255, 98, 0, 0.4); background: rgba(255, 98, 0, 0.1); }
+.chip.A { color: var(--accent); border-color: rgba(var(--accent-rgb), 0.4); background: rgba(var(--accent-rgb), 0.1); }
 .chip.B { color: #06b6d4; border-color: rgba(6, 182, 212, 0.4); background: rgba(6, 182, 212, 0.1); }
 .chip.C { color: #10b981; border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1); }
 .chip.D { color: #94a3b8; border-color: rgba(148, 163, 184, 0.4); background: rgba(148, 163, 184, 0.1); }
@@ -429,7 +430,7 @@ html, body {
 
 .mscell:hover {
   background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 98, 0, 0.4);
+  border-color: rgba(var(--accent-rgb), 0.4);
   transform: translateY(-4px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
