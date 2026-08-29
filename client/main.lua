@@ -17,7 +17,13 @@ local function openBoard()
     if isOpen then return end
     isOpen = true
     SetNuiFocus(true, true)
-    SendNUIMessage({ action = "open" })
+
+    -- Name lets the UI mark and jump to the player's own row.
+    local name = GetPlayerName(PlayerId())
+    local ok, profile = pcall(function() return exports['spz-identity']:GetProfile() end)
+    if ok and type(profile) == 'table' and profile.username then name = profile.username end
+
+    SendNUIMessage({ action = "open", player = name })
 end
 
 local function closeBoard()
@@ -67,7 +73,21 @@ RegisterNUICallback("lbFetch", function(data, cb)
         lib.callback("spz-races:getActivityFeed", false, function(r) cb(r or {}) end, { limit = 50 })
 
     elseif tab == "me" then
-        lib.callback("spz-races:getPlayerStats", false, function(r) cb(r or {}) end, {})
+        -- Stats power the tiles; the recent-race history powers the charts.
+        lib.callback("spz-races:getPlayerStats", false, function(stats)
+            lib.callback("spz-races:getPlayerHistory", false, function(hist)
+                lib.callback("spz-races:getPlayerActivity", false, function(activity)
+                    lib.callback("spz-races:getPlayerTrackSummary", false, function(tracks)
+                        cb({
+                            stats    = stats or {},
+                            history  = (hist and hist.rows) or {},
+                            activity = activity or {},   -- day x track counts (heatmap)
+                            tracks   = tracks or {},     -- career totals per track (filter)
+                        })
+                    end, {})
+                end, { days = 364 })
+            end, { page = 1, pageSize = 60 })
+        end, {})
 
     else
         cb({})
