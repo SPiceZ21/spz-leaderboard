@@ -69,6 +69,12 @@ RegisterNUICallback("lbFetch", function(data, cb)
     elseif tab == "records" then
         lib.callback("spz-races:getAllTrackRecords", false, function(r) cb(r or {}) end, {})
 
+    elseif tab == "rivals" then
+        lib.callback("spz-progression:getRivalBoard", false, function(r) cb(r or {}) end)
+
+    elseif tab == "duels" then
+        lib.callback("spz-races:getDuelBoard", false, function(r) cb(r or {}) end, { limit = 50 })
+
     elseif tab == "activity" then
         lib.callback("spz-races:getActivityFeed", false, function(r) cb(r or {}) end, { limit = 50 })
 

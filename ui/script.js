@@ -43,6 +43,8 @@ const ICONS = {
   records:   ico('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'),
   activity:  ico('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'),
   me:        ico('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+  rivals:    ico('<path d="M16 3h5v5"/><path d="M8 21H3v-5"/><path d="M21 3 14 10"/><path d="m3 21 7-7"/><path d="M8 3H3v5"/><path d="m3 3 7 7"/><path d="M16 21h5v-5"/><path d="m21 21-7-7"/>'),
+  duels:     ico('<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="M19 21 21 19"/><path d="M9.5 6.5 21 18v3h-3L6.5 9.5"/>'),
   caret:     ico('<polyline points="6 9 12 15 18 9"/>'),
 };
 
@@ -83,6 +85,27 @@ const TABS = {
       { key: '_class', label: 'Class',    asc: true, text: true },
     ],
   },
+  rivals: {
+    label: 'Rival',
+    title: 'Your rival',
+    sub: 'Matched on iRating. Head-to-head best laps, track by track.',
+    unit: 'Tracks',
+    sorts: [
+      { key: '_margin', label: 'Margin' },
+      { key: '_track',  label: 'Track', asc: true, text: true },
+    ],
+  },
+  duels: {
+    label: 'Ghost duels',
+    title: 'Ghost duels',
+    sub: 'Staked runs against a stored ghost — who took the pot, and by how much.',
+    unit: 'Duels',
+    sorts: [
+      { key: '_recent', label: 'Recent' },
+      { key: 'stake',   label: 'Stake'  },
+      { key: '_margin', label: 'Margin' },
+    ],
+  },
   activity: {
     label: 'Activity',
     title: 'Race activity',
@@ -99,8 +122,8 @@ const TABS = {
   },
 };
 
-const LIST_TABS = ['standings', 'classes', 'records', 'activity', 'me'];
-const SEARCHABLE = { standings: true, classes: true, records: true };
+const LIST_TABS = ['standings', 'classes', 'records', 'rivals', 'duels', 'activity', 'me'];
+const SEARCHABLE = { standings: true, classes: true, records: true, duels: true };
 const HAS_PODIUM = { standings: true, classes: true };
 
 // ── Small helpers ────────────────────────────────────────────────────────────
@@ -187,9 +210,12 @@ function sortRows(rows) {
 
   const pick = r => {
     switch (spec.key) {
-      case '_time':  return timeSeconds(r.lap_time_f || r.best_time_f);
-      case '_track': return String(r.track_name || r.track || '').toLowerCase();
-      case '_class': return String(r.car_class || r.class || '').toLowerCase();
+      case '_time':   return timeSeconds(r.lap_time_f || r.best_time_f);
+      case '_track':  return String(r.track_name || r.track || '').toLowerCase();
+      case '_class':  return String(r.car_class || r.class || '').toLowerCase();
+      // Rivals: biggest gap first, either direction. Duels: same idea.
+      case '_margin': return Math.abs(num(r.margin != null ? r.margin : r.margin_ms));
+      case '_recent': return Date.parse(String(r.settled_at || r.created_at || '').replace(' ', 'T')) || 0;
       default:       return num(r[spec.key]);
     }
   };
@@ -384,6 +410,169 @@ function renderRecords(rows) {
   }).join('');
 
   return { head, html, podium: '' };
+}
+
+// ── Rivals ───────────────────────────────────────────────────────────────────
+// Head-to-head against the iRating-matched rival: one row per track, showing
+// both stored best laps and who holds it.
+function renderRivals(data) {
+  const d = data || {};
+  if (!d.rival) {
+    return { head: '', html: emptyState('No rival assigned yet — race a few laps and check back.'), podium: '' };
+  }
+
+  const me = d.me || {};
+  const h2h = d.head_to_head || {};
+  const tracks = Array.isArray(d.tracks) ? d.tracks : [];
+
+  // Only tracks where both have a time can be compared.
+  const contested = tracks.filter(t => t.my_ms && t.rival_ms);
+  const lead = num(h2h.wins) - num(h2h.losses);
+
+  const header = `
+    <div class="versus">
+      <div class="vs-side">
+        ${avatar(me.name, me.avatar, true)}
+        <div class="vs-txt">
+          <div class="vs-name">${esc(me.name || 'You')}</div>
+          <div class="vs-meta">${fmtNum(me.iRating)} iR</div>
+        </div>
+      </div>
+
+      <div class="vs-mid">
+        <div class="vs-score"><b class="${lead > 0 ? 'up' : ''}">${fmtNum(h2h.wins)}</b><span>–</span><b class="${lead < 0 ? 'down' : ''}">${fmtNum(h2h.losses)}</b></div>
+        <div class="vs-label">${contested.length} contested track${contested.length === 1 ? '' : 's'}</div>
+      </div>
+
+      <div class="vs-side vs-right">
+        <div class="vs-txt">
+          <div class="vs-name">${esc(d.rival.name || 'Rival')}</div>
+          <div class="vs-meta">${fmtNum(d.rival.iRating)} iR · ${esc(d.rival.rank_title || 'Driver')}</div>
+        </div>
+        ${avatar(d.rival.name, d.rival.avatar, true)}
+      </div>
+    </div>`;
+
+  if (!tracks.length) {
+    return { head: '', html: header + emptyState('Neither of you has a stored lap yet.'), podium: '' };
+  }
+
+  const head = `<div class="thead">
+    <span style="flex:1;margin-left:4px">Track</span>
+    <span style="width:104px">Your best</span>
+    <span style="width:104px">${esc(d.rival.name || 'Rival')}</span>
+    <span style="width:104px">Margin</span>
+    <span style="width:20px"></span>
+  </div>`;
+
+  const maxMargin = Math.max(...contested.map(t => Math.abs(num(t.margin))), 1);
+
+  const rows = tracks.map((t, i) => {
+    const mine = num(t.my_ms), theirs = num(t.rival_ms);
+    const both = mine > 0 && theirs > 0;
+    const margin = both ? theirs - mine : null;          // +ve = you are faster
+    const ahead = margin != null && margin > 0;
+    const key = rowKey({ track: t.track }, i);
+
+    const marginCell = margin == null
+      ? `<div class="col"><div class="col-v" style="color:var(--tx-4)">—</div></div>`
+      : `<div class="col"><div class="col-v ${ahead ? 'lead' : 'trail'}">${ahead ? '−' : '+'}${(Math.abs(margin) / 1000).toFixed(3)}s</div>
+           ${bar(Math.abs(margin), maxMargin, ahead ? 'var(--green)' : '#ef4444')}</div>`;
+
+    return `<div class="row ${both ? (ahead ? 'r-lead' : 'r-trail') : ''} ${openRow === key ? 'open' : ''}" data-key="${esc(key)}">
+      <div class="row-main">
+        <div class="who"><div class="who-txt">
+          <div class="nm">${esc(t.track || 'Track')}</div>
+          <div class="meta">${both ? (ahead ? 'You hold it' : 'Rival holds it') : (mine ? 'Rival has no time' : 'You have no time')}</div>
+        </div></div>
+        <div class="col time"><div class="col-v">${mine ? msToLap(mine) : '—'}</div></div>
+        <div class="col time"><div class="col-v" style="color:var(--tx-2)">${theirs ? msToLap(theirs) : '—'}</div></div>
+        ${marginCell}
+        <div class="caret">${ICONS.caret}</div>
+      </div>
+      ${detailCards([
+        ['Track', t.track],
+        ['Your best', mine ? msToLap(mine) : null],
+        [`${d.rival.name || 'Rival'} best`, theirs ? msToLap(theirs) : null],
+        ['Margin', margin != null ? `${ahead ? '−' : '+'}${(Math.abs(margin) / 1000).toFixed(3)}s` : null],
+        ['Holder', both ? (ahead ? (me.name || 'You') : d.rival.name) : null],
+      ])}
+    </div>`;
+  }).join('');
+
+  return { head: header + head, html: rows, podium: '' };
+}
+
+// ── Ghost duels ──────────────────────────────────────────────────────────────
+function renderDuels(data) {
+  const d = data || {};
+  const rec = d.record || {};
+  const rows = Array.isArray(d.rows) ? d.rows : (Array.isArray(d) ? d : []);
+
+  const cell = (v, l) => `<div class="mscell sm"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  const net = num(rec.won_credits) - num(rec.lost_credits);
+  const record = `
+    <div class="mystats duel-record">
+      ${cell(fmtNum(rec.wins), 'Duels won')}
+      ${cell(fmtNum(rec.losses), 'Duels lost')}
+      ${cell(rec.total ? Math.round(num(rec.win_rate) * 100) + '%' : '—', 'Win rate')}
+      ${cell(`${net >= 0 ? '+' : '−'}${fmtNum(Math.abs(net))}`, 'Net credits')}
+      ${cell(fmtNum(rec.defended), 'Ghost defended')}
+      ${cell(fmtNum(rec.pending), 'Pending')}
+    </div>`;
+
+  if (!rows.length) return { head: record, html: emptyState('No duels have been run yet.'), podium: '' };
+
+  const head = `<div class="thead">
+    <span style="min-width:62px">Result</span>
+    <span style="flex:1;margin-left:10px">Challenger vs ghost</span>
+    <span style="width:140px">Track</span>
+    <span style="width:104px">Margin</span>
+    <span style="width:104px">Stake</span>
+    <span style="width:20px"></span>
+  </div>`;
+
+  const html = rows.map((r, i) => {
+    const key = rowKey({ id: r.id }, i);
+    const out = String(r.outcome || 'pending');
+    const margin = r.margin_ms;
+    const won = out === 'win';
+    const when = r.settled_at || r.created_at;
+
+    const marginCell = margin == null
+      ? `<div class="col"><div class="col-v" style="color:var(--tx-4)">—</div></div>`
+      : `<div class="col"><div class="col-v ${margin > 0 ? 'lead' : 'trail'}">${margin > 0 ? '−' : '+'}${(Math.abs(margin) / 1000).toFixed(3)}s</div></div>`;
+
+    return `<div class="row ${openRow === key ? 'open' : ''} ${isMine(r.challenger) || isMine(r.opponent) ? 'mine' : ''}" data-key="${esc(key)}" data-name="${esc(r.challenger)}">
+      <div class="row-main">
+        <span class="outcome o-${esc(out)}">${esc(out === 'win' ? 'WIN' : out === 'loss' ? 'LOSS' : out === 'void' ? 'VOID' : 'OPEN')}</span>
+        <div class="who">
+          ${avatar(r.challenger, r.challenger_avatar)}
+          <div class="who-txt">
+            <div class="nm">${esc(r.challenger || 'Racer')} <span class="vs-sep">vs</span> ${esc(r.opponent || 'Ghost')}</div>
+            <div class="meta">${esc(when ? String(when).slice(0, 16).replace('T', ' ') : 'Pending')}</div>
+          </div>
+          ${avatar(r.opponent, r.opponent_avatar)}
+        </div>
+        <div class="col" style="width:140px"><div class="col-v" style="font-size:12.5px">${esc(r.track || 'Track')}</div></div>
+        ${marginCell}
+        <div class="col"><div class="col-v ${won ? 'lead' : ''}">${fmtNum(r.stake)}<small>CR</small></div></div>
+        <div class="caret">${ICONS.caret}</div>
+      </div>
+      ${detailCards([
+        ['Challenger', r.challenger],
+        ['Ghost', r.opponent],
+        ['Track', r.track],
+        ['Target time', r.target_f],
+        ['Result time', r.result_f],
+        ['Stake', `${fmtNum(r.stake)} CR`],
+        ['Outcome', out],
+        ['Settled', r.settled_at ? String(r.settled_at).slice(0, 16).replace('T', ' ') : null],
+      ])}
+    </div>`;
+  }).join('');
+
+  return { head: record + head, html, podium: '' };
 }
 
 function renderActivity(rows) {
@@ -830,6 +1019,8 @@ const RENDER = {
   standings: renderStandings,
   classes:   renderClasses,
   records:   renderRecords,
+  rivals:    renderRivals,
+  duels:     renderDuels,
   activity:  renderActivity,
   me:        renderMe,
 };
@@ -837,9 +1028,10 @@ const RENDER = {
 // ── Filtering + paint ────────────────────────────────────────────────────────
 function matches(r, f) {
   if (!f) return true;
-  const hay = (activeTab === 'records')
-    ? `${r.track_name || r.track || ''} ${r.player_name || r.holder || ''}`
-    : (r.name || r.player || r.title || '');
+  let hay;
+  if (activeTab === 'records')     hay = `${r.track_name || r.track || ''} ${r.player_name || r.holder || ''}`;
+  else if (activeTab === 'duels')  hay = `${r.challenger || ''} ${r.opponent || ''} ${r.track || ''}`;
+  else                             hay = (r.name || r.player || r.title || '');
   return hay.toLowerCase().includes(f);
 }
 
@@ -847,6 +1039,32 @@ function renderCurrent() {
   const tab = TABS[activeTab];
   heroTitle.textContent = tab.title;
   heroSub.textContent = tab.sub;
+
+  // Rivals and Duels arrive as objects with their rows nested, so they sort and
+  // filter on the inner list rather than the payload itself.
+  if (activeTab === 'rivals') {
+    const d = lastData || {};
+    const out = renderRivals({ ...d, tracks: sortRows(Array.isArray(d.tracks) ? d.tracks : []) });
+    podiumEl.innerHTML = '';
+    body.innerHTML = out.head + out.html;
+    heroCount.textContent = fmtNum((d.tracks || []).length);
+    buildChips((d.tracks || []).length);
+    searchCount.textContent = '';
+    return;
+  }
+
+  if (activeTab === 'duels') {
+    const d = lastData || {};
+    const source = Array.isArray(d.rows) ? d.rows : [];
+    const filtered = filterText ? source.filter(r => matches(r, filterText)) : source;
+    const out = renderDuels({ record: d.record, rows: sortRows(filtered) });
+    podiumEl.innerHTML = '';
+    body.innerHTML = out.head + out.html;
+    heroCount.textContent = fmtNum(filtered.length);
+    buildChips(filtered.length);
+    searchCount.textContent = filterText ? `${filtered.length}/${source.length}` : '';
+    return;
+  }
 
   if (!Array.isArray(lastData)) {                       // My stats is an object
     const out = RENDER[activeTab](lastData);
@@ -1046,6 +1264,8 @@ const MOCK = {
     { title: 'SPICEZ won Downtown GP (S)', player: 'SPICEZ', detail: 'Downtown GP', car_class: 'S', position: 1, raced_at: '2026-07-13 20:11' },
     { title: 'Ghost set a record on Docks Lines', player: 'Ghost', detail: 'Docks Lines', car_class: 'A', lap_time_f: '01:44.02', raced_at: '2026-07-13 19:40' },
   ],
+  rivals: {"me":{"name":"SPICEZ","avatar":"https://cdn.discordapp.com/embed/avatars/0.png","iRating":1840},"rival":{"name":"Ghost","avatar":"https://cdn.discordapp.com/embed/avatars/2.png","iRating":1810,"rank_title":"Pro","level":19,"points":9400,"assigned_at":"2026-08-01"},"head_to_head":{"wins":3,"losses":1,"tracks":6},"tracks":[{"track":"Downtown GP","my_ms":72000,"rival_ms":70550,"margin":-1450},{"track":"Docks Lines","my_ms":77100,"rival_ms":79200,"margin":2100},{"track":"Route 68","my_ms":80400,"rival_ms":82500,"margin":2100},{"track":"Vinewood Loop","my_ms":85500,"rival_ms":null,"margin":null},{"track":"Airport Sprint","my_ms":88800,"rival_ms":90900,"margin":2100},{"track":"Sandy Ridge","my_ms":null,"rival_ms":96000,"margin":null}]},
+  duels: {"record":{"total":6,"wins":4,"losses":2,"pending":1,"win_rate":0.6666666666666666,"won_credits":1850,"lost_credits":700,"challenged":5,"defended":3},"rows":[{"id":100,"track":"Downtown GP","stake":250,"outcome":"win","target_ms":78000,"result_ms":77400,"target_f":"1:18.000","result_f":"1:17.400","margin_ms":600,"challenger":"SPICEZ","challenger_avatar":"https://cdn.discordapp.com/embed/avatars/0.png","opponent":"ItzSteve","opponent_avatar":"https://cdn.discordapp.com/embed/avatars/2.png","created_at":"2026-08-10 19:20","settled_at":"2026-08-10 19:41"},{"id":101,"track":"Docks Lines","stake":375,"outcome":"loss","target_ms":80600,"result_ms":81170,"target_f":"1:20.600","result_f":"1:21.170","margin_ms":-570,"challenger":"Rens","challenger_avatar":"https://cdn.discordapp.com/embed/avatars/1.png","opponent":"Ghost","opponent_avatar":"https://cdn.discordapp.com/embed/avatars/3.png","created_at":"2026-08-11 19:20","settled_at":"2026-08-11 19:41"},{"id":102,"track":"Route 68","stake":500,"outcome":"win","target_ms":83200,"result_ms":82420,"target_f":"1:23.200","result_f":"1:22.420","margin_ms":780,"challenger":"Ghost","challenger_avatar":"https://cdn.discordapp.com/embed/avatars/2.png","opponent":"Pudge","opponent_avatar":"https://cdn.discordapp.com/embed/avatars/4.png","created_at":"2026-08-12 19:20","settled_at":"2026-08-12 19:41"},{"id":103,"track":"Vinewood Loop","stake":625,"outcome":"pending","target_ms":85800,"result_ms":null,"target_f":"1:25.800","result_f":null,"margin_ms":null,"challenger":"Kimberly","challenger_avatar":"https://cdn.discordapp.com/embed/avatars/3.png","opponent":"SPICEZ","opponent_avatar":"https://cdn.discordapp.com/embed/avatars/0.png","created_at":"2026-08-13 19:20","settled_at":null},{"id":104,"track":"Airport Sprint","stake":750,"outcome":"win","target_ms":88400,"result_ms":87440,"target_f":"1:28.400","result_f":"1:27.440","margin_ms":960,"challenger":"SPICEZ","challenger_avatar":"https://cdn.discordapp.com/embed/avatars/4.png","opponent":"ItzSteve","opponent_avatar":"https://cdn.discordapp.com/embed/avatars/1.png","created_at":"2026-08-14 19:20","settled_at":"2026-08-14 19:41"},{"id":105,"track":"Sandy Ridge","stake":875,"outcome":"loss","target_ms":91000,"result_ms":92050,"target_f":"1:31.000","result_f":"1:32.050","margin_ms":-1050,"challenger":"Rens","challenger_avatar":"https://cdn.discordapp.com/embed/avatars/0.png","opponent":"Ghost","opponent_avatar":"https://cdn.discordapp.com/embed/avatars/2.png","created_at":"2026-08-15 19:20","settled_at":"2026-08-15 19:41"},{"id":106,"track":"Downtown GP","stake":1000,"outcome":"void","target_ms":93600,"result_ms":94770,"target_f":"1:33.600","result_f":"1:34.770","margin_ms":-1170,"challenger":"Ghost","challenger_avatar":"https://cdn.discordapp.com/embed/avatars/1.png","opponent":"Pudge","opponent_avatar":"https://cdn.discordapp.com/embed/avatars/3.png","created_at":"2026-08-16 19:20","settled_at":"2026-08-16 19:41"},{"id":107,"track":"Docks Lines","stake":1125,"outcome":"win","target_ms":96200,"result_ms":94970,"target_f":"1:36.200","result_f":"1:34.970","margin_ms":1230,"challenger":"Kimberly","challenger_avatar":"https://cdn.discordapp.com/embed/avatars/2.png","opponent":"SPICEZ","opponent_avatar":"https://cdn.discordapp.com/embed/avatars/4.png","created_at":"2026-08-17 19:20","settled_at":"2026-08-17 19:41"}]},
   me: { stats: { total_races: 60, wins: 42, podiums: 51, dnfs: 3, win_rate: 0.7, iRating: 1840, sr: 3.42 }, history: [{"track":"Airport Sprint","car_class":"S","finish_position":4,"best_lap_ms":101494,"points_earned":132,"sr_delta":-0.1,"dnf":false,"raced_at":"2026-07-20"},{"track":"Vinewood Loop","car_class":"S","finish_position":2,"best_lap_ms":98782,"points_earned":176,"sr_delta":0.1,"dnf":false,"raced_at":"2026-07-19"},{"track":"Route 68","car_class":"S","finish_position":1,"best_lap_ms":87833,"points_earned":198,"sr_delta":0.1,"dnf":false,"raced_at":"2026-07-18"},{"track":"Docks Lines","car_class":"S","finish_position":3,"best_lap_ms":93266,"points_earned":154,"sr_delta":0.17,"dnf":false,"raced_at":"2026-07-17"},{"track":"Downtown GP","car_class":"S","finish_position":8,"best_lap_ms":95253,"points_earned":44,"sr_delta":-0.1,"dnf":false,"raced_at":"2026-07-16"},{"track":"Airport Sprint","car_class":"S","finish_position":1,"best_lap_ms":98687,"points_earned":198,"sr_delta":0.1,"dnf":false,"raced_at":"2026-07-15"},{"track":"Vinewood Loop","car_class":"S","finish_position":2,"best_lap_ms":98454,"points_earned":176,"sr_delta":0.1,"dnf":false,"raced_at":"2026-07-14"},{"track":"Route 68","car_class":"S","finish_position":6,"best_lap_ms":91186,"points_earned":88,"sr_delta":-0.03,"dnf":true,"raced_at":"2026-07-13"},{"track":"Docks Lines","car_class":"S","finish_position":1,"best_lap_ms":93886,"points_earned":198,"sr_delta":0.1,"dnf":false,"raced_at":"2026-07-12"},{"track":"Downtown GP","car_class":"S","finish_position":3,"best_lap_ms":93543,"points_earned":154,"sr_delta":0.1,"dnf":false,"raced_at":"2026-07-11"},{"track":"Airport Sprint","car_class":"S","finish_position":1,"best_lap_ms":97750,"points_earned":198,"sr_delta":0.1,"dnf":false,"raced_at":"2026-07-10"},{"track":"Vinewood Loop","car_class":"S","finish_position":7,"best_lap_ms":99152,"points_earned":66,"sr_delta":-0.03,"dnf":false,"raced_at":"2026-07-09"},{"track":"Route 68","car_class":"S","finish_position":2,"best_lap_ms":88646,"points_earned":176,"sr_delta":0.1,"dnf":false,"raced_at":"2026-07-08"},{"track":"Docks Lines","car_class":"S","finish_position":1,"best_lap_ms":94638,"points_earned":198,"sr_delta":0.1,"dnf":false,"raced_at":"2026-07-07"},{"track":"Downtown GP","car_class":"S","finish_position":4,"best_lap_ms":95545,"points_earned":132,"sr_delta":-0.1,"dnf":false,"raced_at":"2026-07-06"},{"track":"Airport Sprint","car_class":"S","finish_position":1,"best_lap_ms":98676,"points_earned":198,"sr_delta":0.17,"dnf":false,"raced_at":"2026-07-05"},{"track":"Vinewood Loop","car_class":"S","finish_position":5,"best_lap_ms":97700,"points_earned":110,"sr_delta":-0.1,"dnf":false,"raced_at":"2026-07-04"},{"track":"Route 68","car_class":"S","finish_position":2,"best_lap_ms":87124,"points_earned":176,"sr_delta":0.1,"dnf":false,"raced_at":"2026-07-03"},{"track":"Docks Lines","car_class":"S","finish_position":3,"best_lap_ms":94445,"points_earned":154,"sr_delta":0.1,"dnf":false,"raced_at":"2026-07-02"},{"track":"Downtown GP","car_class":"S","finish_position":1,"best_lap_ms":94537,"points_earned":198,"sr_delta":0.17,"dnf":false,"raced_at":"2026-07-01"}], activity: [{"day":"2025-10-04","track":"Docks Lines","races":3,"wins":1,"dnfs":0},{"day":"2025-10-12","track":"Vinewood Loop","races":3,"wins":0,"dnfs":0},{"day":"2025-10-13","track":"Route 68","races":1,"wins":0,"dnfs":1},{"day":"2025-10-16","track":"Route 68","races":2,"wins":0,"dnfs":0},{"day":"2025-10-17","track":"Docks Lines","races":2,"wins":0,"dnfs":0},{"day":"2025-10-19","track":"Docks Lines","races":3,"wins":0,"dnfs":0},{"day":"2025-10-20","track":"Downtown GP","races":1,"wins":0,"dnfs":0},{"day":"2025-10-22","track":"Airport Sprint","races":1,"wins":0,"dnfs":0},{"day":"2025-10-24","track":"Airport Sprint","races":1,"wins":0,"dnfs":0},{"day":"2025-10-25","track":"Vinewood Loop","races":1,"wins":0,"dnfs":0},{"day":"2025-10-26","track":"Airport Sprint","races":1,"wins":0,"dnfs":0},{"day":"2025-10-28","track":"Vinewood Loop","races":3,"wins":0,"dnfs":0},{"day":"2025-10-31","track":"Docks Lines","races":2,"wins":0,"dnfs":0},{"day":"2025-11-02","track":"Route 68","races":2,"wins":0,"dnfs":0},{"day":"2025-11-04","track":"Airport Sprint","races":3,"wins":0,"dnfs":0},{"day":"2025-11-13","track":"Route 68","races":3,"wins":1,"dnfs":0},{"day":"2025-11-14","track":"Vinewood Loop","races":2,"wins":0,"dnfs":0},{"day":"2025-11-15","track":"Downtown GP","races":2,"wins":0,"dnfs":1},{"day":"2025-11-19","track":"Vinewood Loop","races":3,"wins":0,"dnfs":0},{"day":"2025-11-24","track":"Downtown GP","races":1,"wins":0,"dnfs":0},{"day":"2025-12-02","track":"Downtown GP","races":3,"wins":1,"dnfs":0},{"day":"2025-12-04","track":"Docks Lines","races":2,"wins":1,"dnfs":0},{"day":"2025-12-10","track":"Docks Lines","races":1,"wins":0,"dnfs":0},{"day":"2025-12-11","track":"Airport Sprint","races":1,"wins":0,"dnfs":0},{"day":"2025-12-13","track":"Docks Lines","races":2,"wins":0,"dnfs":0},{"day":"2025-12-15","track":"Route 68","races":1,"wins":1,"dnfs":0},{"day":"2025-12-16","track":"Downtown GP","races":2,"wins":1,"dnfs":0},{"day":"2025-12-18","track":"Downtown GP","races":2,"wins":0,"dnfs":0},{"day":"2025-12-19","track":"Route 68","races":1,"wins":1,"dnfs":0},{"day":"2025-12-26","track":"Airport Sprint","races":3,"wins":0,"dnfs":0},{"day":"2025-12-29","track":"Downtown GP","races":1,"wins":1,"dnfs":0},{"day":"2026-01-02","track":"Downtown GP","races":2,"wins":0,"dnfs":0},{"day":"2026-01-12","track":"Route 68","races":3,"wins":1,"dnfs":0},{"day":"2026-01-21","track":"Airport Sprint","races":2,"wins":0,"dnfs":0},{"day":"2026-01-26","track":"Route 68","races":1,"wins":1,"dnfs":0},{"day":"2026-02-02","track":"Downtown GP","races":3,"wins":0,"dnfs":0},{"day":"2026-02-03","track":"Route 68","races":2,"wins":0,"dnfs":0},{"day":"2026-02-05","track":"Vinewood Loop","races":2,"wins":1,"dnfs":0},{"day":"2026-02-08","track":"Docks Lines","races":2,"wins":1,"dnfs":0},{"day":"2026-02-09","track":"Vinewood Loop","races":2,"wins":0,"dnfs":0},{"day":"2026-02-17","track":"Downtown GP","races":3,"wins":0,"dnfs":0},{"day":"2026-02-20","track":"Route 68","races":2,"wins":1,"dnfs":0},{"day":"2026-02-23","track":"Docks Lines","races":2,"wins":0,"dnfs":0},{"day":"2026-03-02","track":"Downtown GP","races":2,"wins":1,"dnfs":0},{"day":"2026-03-08","track":"Vinewood Loop","races":2,"wins":0,"dnfs":0},{"day":"2026-03-14","track":"Downtown GP","races":1,"wins":1,"dnfs":0},{"day":"2026-03-15","track":"Route 68","races":3,"wins":1,"dnfs":0},{"day":"2026-03-17","track":"Vinewood Loop","races":2,"wins":1,"dnfs":0},{"day":"2026-03-19","track":"Downtown GP","races":3,"wins":1,"dnfs":0},{"day":"2026-03-24","track":"Downtown GP","races":1,"wins":0,"dnfs":0},{"day":"2026-03-31","track":"Downtown GP","races":1,"wins":0,"dnfs":0},{"day":"2026-04-04","track":"Downtown GP","races":3,"wins":0,"dnfs":0},{"day":"2026-04-06","track":"Downtown GP","races":1,"wins":1,"dnfs":0},{"day":"2026-04-09","track":"Docks Lines","races":2,"wins":0,"dnfs":0},{"day":"2026-04-14","track":"Docks Lines","races":1,"wins":0,"dnfs":0},{"day":"2026-04-17","track":"Vinewood Loop","races":2,"wins":0,"dnfs":0},{"day":"2026-04-19","track":"Route 68","races":2,"wins":0,"dnfs":0},{"day":"2026-04-21","track":"Route 68","races":1,"wins":0,"dnfs":0},{"day":"2026-04-23","track":"Docks Lines","races":1,"wins":1,"dnfs":0},{"day":"2026-04-26","track":"Airport Sprint","races":3,"wins":0,"dnfs":0},{"day":"2026-05-02","track":"Downtown GP","races":2,"wins":1,"dnfs":1},{"day":"2026-05-06","track":"Docks Lines","races":1,"wins":1,"dnfs":0},{"day":"2026-05-08","track":"Downtown GP","races":3,"wins":1,"dnfs":0},{"day":"2026-05-15","track":"Docks Lines","races":2,"wins":0,"dnfs":0},{"day":"2026-05-23","track":"Airport Sprint","races":1,"wins":0,"dnfs":0},{"day":"2026-05-24","track":"Airport Sprint","races":3,"wins":0,"dnfs":0},{"day":"2026-05-30","track":"Vinewood Loop","races":1,"wins":1,"dnfs":0},{"day":"2026-05-31","track":"Airport Sprint","races":1,"wins":0,"dnfs":0},{"day":"2026-06-01","track":"Docks Lines","races":3,"wins":1,"dnfs":0},{"day":"2026-06-04","track":"Airport Sprint","races":3,"wins":0,"dnfs":0},{"day":"2026-06-16","track":"Docks Lines","races":3,"wins":0,"dnfs":0},{"day":"2026-06-18","track":"Downtown GP","races":2,"wins":1,"dnfs":0},{"day":"2026-06-22","track":"Airport Sprint","races":1,"wins":0,"dnfs":0},{"day":"2026-06-24","track":"Vinewood Loop","races":2,"wins":1,"dnfs":0},{"day":"2026-06-26","track":"Airport Sprint","races":2,"wins":1,"dnfs":0},{"day":"2026-06-29","track":"Airport Sprint","races":3,"wins":0,"dnfs":0},{"day":"2026-06-30","track":"Airport Sprint","races":2,"wins":0,"dnfs":0},{"day":"2026-07-04","track":"Route 68","races":3,"wins":0,"dnfs":0},{"day":"2026-07-08","track":"Route 68","races":1,"wins":1,"dnfs":0},{"day":"2026-07-09","track":"Airport Sprint","races":3,"wins":1,"dnfs":0},{"day":"2026-07-18","track":"Docks Lines","races":2,"wins":1,"dnfs":0},{"day":"2026-07-20","track":"Docks Lines","races":1,"wins":0,"dnfs":0},{"day":"2026-07-21","track":"Vinewood Loop","races":3,"wins":1,"dnfs":0},{"day":"2026-07-23","track":"Downtown GP","races":3,"wins":0,"dnfs":0},{"day":"2026-07-26","track":"Route 68","races":3,"wins":0,"dnfs":0},{"day":"2026-07-27","track":"Airport Sprint","races":3,"wins":1,"dnfs":0},{"day":"2026-08-01","track":"Route 68","races":3,"wins":0,"dnfs":0},{"day":"2026-08-10","track":"Airport Sprint","races":2,"wins":1,"dnfs":0},{"day":"2026-08-13","track":"Downtown GP","races":1,"wins":1,"dnfs":0},{"day":"2026-08-14","track":"Route 68","races":1,"wins":0,"dnfs":0},{"day":"2026-08-25","track":"Airport Sprint","races":3,"wins":0,"dnfs":0},{"day":"2026-08-26","track":"Downtown GP","races":3,"wins":0,"dnfs":1}], tracks: [{"track":"Downtown GP","races":46,"wins":11,"podiums":21,"dnfs":0},{"track":"Airport Sprint","races":42,"wins":4,"podiums":10,"dnfs":0},{"track":"Docks Lines","races":35,"wins":7,"podiums":12,"dnfs":0},{"track":"Route 68","races":35,"wins":8,"podiums":11,"dnfs":0},{"track":"Vinewood Loop","races":28,"wins":5,"podiums":12,"dnfs":0}] },
 };
 
