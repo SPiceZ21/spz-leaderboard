@@ -50,6 +50,13 @@ CreateThread(function()
     end
 end)
 
+RegisterNUICallback("rerollRival", function(_, cb)
+    local res = lib.callback.await("spz-progression:rerollRival", false)
+    if res and res.ok then lib.notify({ description = "New rival drawn", type = "success" })
+    else lib.notify({ description = (res and res.error) or "Failed", type = "error" }) end
+    cb(res or { ok = false })
+end)
+
 RegisterNUICallback("lbClose", function(_, cb)
     closeBoard()
     cb("ok")

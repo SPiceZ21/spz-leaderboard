@@ -774,3 +774,19 @@ html, body { width: 100vw; height: 100vh; overflow: hidden; background: transpar
   0%, 100% { box-shadow: none; }
   25%      { box-shadow: 0 0 0 2px rgba(var(--accent-rgb), .55), 0 0 24px var(--accent-glow); }
 }
+
+/* Rivalry activity feed */
+.chart.feed { grid-column: 1 / -1; margin-bottom: 12px; }
+.feed-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.feed-row {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--bg-card-2);
+  border: 1px solid var(--line);
+}
+.feed-row > i { width: 3px; align-self: stretch; border-radius: 2px; background: var(--tx-4); flex-shrink: 0; }
+.feed-row.ours > i   { background: var(--green); }
+.feed-row.theirs > i { background: #ef4444; }
+.feed-row .who-txt { flex: 1; min-width: 0; }
+.vs-reroll { margin-top: 8px; padding: 5px 10px; font-size: 11px; }
