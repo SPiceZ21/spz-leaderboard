@@ -13,7 +13,37 @@ CreateThread(function()
 end)
 AddEventHandler('SPZ:themeUpdated', function(theme) pushLeaderboardTheme(theme) end)
 
-local function openBoard()
+-- Default binding, declared once so the key registered here and the key the
+-- race HUD prints are the same value.
+local KEY_BOARD = "F6"
+
+-- The race this player last finished. Set by spz-races when results land, so
+-- opening the board straight after a race lands on THAT race rather than making
+-- the player hunt for it in the archive.
+--
+-- Only while the result is FRESH. The board is a general leaderboard as well as
+-- a results screen; pressing the key an hour later should open the leaderboard,
+-- not drop you back into a race you have stopped caring about.
+local RESULTS_FRESH_MS = 5 * 60 * 1000
+
+local lastRaceId = nil
+local lastRaceAt = 0
+
+RegisterNetEvent("SPZ:raceEnd", function(results)
+    if results and results.raceId then
+        lastRaceId = results.raceId
+        lastRaceAt = GetGameTimer()
+    end
+end)
+
+-- The deep-link target, or nil when there is nothing recent to show.
+local function freshRaceOpts()
+    if not lastRaceId then return nil end
+    if (GetGameTimer() - lastRaceAt) > RESULTS_FRESH_MS then return nil end
+    return { tab = "races", raceId = lastRaceId }
+end
+
+local function openBoard(opts)
     if isOpen then return end
     isOpen = true
     SetNuiFocus(true, true)
@@ -23,7 +53,13 @@ local function openBoard()
     local ok, profile = pcall(function() return exports['spz-identity']:GetProfile() end)
     if ok and type(profile) == 'table' and profile.username then name = profile.username end
 
-    SendNUIMessage({ action = "open", player = name })
+    SendNUIMessage({
+        action = "open",
+        player = name,
+        -- nil for a normal open: the board starts where it always did.
+        tab    = opts and opts.tab or nil,
+        raceId = opts and opts.raceId or nil,
+    })
 end
 
 local function closeBoard()
@@ -33,8 +69,33 @@ local function closeBoard()
     SendNUIMessage({ action = "close" })
 end
 
-RegisterCommand("leaderboard", function() openBoard() end, false)
-RegisterKeyMapping("leaderboard", "Open Leaderboard", "keyboard", "F6")
+-- F6. Straight into the race you just drove when one has just finished,
+-- otherwise the leaderboard as it always opened.
+RegisterCommand("leaderboard", function() openBoard(freshRaceOpts()) end, false)
+
+-- Straight to the race you just drove. Called by spz-races from the post-race
+-- prompt; falls back to the plain board if no race has finished this session.
+-- Explicit results command: ignores the freshness window, because asking for
+-- results by name means you want them however long ago the race was.
+RegisterCommand("raceresults", function()
+    openBoard(lastRaceId and { tab = "races", raceId = lastRaceId } or nil)
+end, false)
+
+exports("OpenLastRaceResults", function()
+    openBoard(lastRaceId and { tab = "races", raceId = lastRaceId } or nil)
+end)
+RegisterKeyMapping("leaderboard", "Race results / leaderboard", "keyboard", KEY_BOARD)
+
+-- Tell the race HUD which key opens results, so the in-race key strip prints it
+-- alongside the recovery keys. spz-races pushes its own keys the same way; this
+-- resource owns this one, so it pushes it itself rather than raceUI hardcoding
+-- a value that lives here.
+CreateThread(function()
+    while GetResourceState("spz-raceUI") ~= "started" do Wait(500) end
+    pcall(function()
+        exports["spz-raceUI"]:SetKeyHints({ results = KEY_BOARD })
+    end)
+end)
 
 -- ESC / Backspace fallback close
 CreateThread(function()
@@ -81,6 +142,14 @@ RegisterNUICallback("lbFetch", function(data, cb)
 
     elseif tab == "duels" then
         lib.callback("spz-races:getDuelBoard", false, function(r) cb(r or {}) end, { limit = 50 })
+
+    elseif tab == "races" then
+        -- Archive list, or one race in full when the UI asks for a specific id.
+        if data.raceId then
+            lib.callback("spz-races:getRaceResults", false, function(r) cb(r or {}) end, { raceId = data.raceId })
+        else
+            lib.callback("spz-races:getRaceArchive", false, function(r) cb(r or {}) end, { limit = 40 })
+        end
 
     elseif tab == "activity" then
         lib.callback("spz-races:getActivityFeed", false, function(r) cb(r or {}) end, { limit = 50 })

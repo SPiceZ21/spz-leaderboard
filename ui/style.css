@@ -790,3 +790,106 @@ html, body { width: 100vw; height: 100vh; overflow: hidden; background: transpar
 .feed-row.theirs > i { background: #ef4444; }
 .feed-row .who-txt { flex: 1; min-width: 0; }
 .vs-reroll { margin-top: 8px; padding: 5px 10px; font-size: 11px; }
+
+/* ── Race archive ────────────────────────────────────────────
+   The list rows carry three compact stats on the right instead of the ranked
+   columns the other tabs use — a race is described by who won, how many drove
+   it and how long it took, none of which is a rank. */
+.race-cols {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin-left: auto;
+  padding-right: 14px;
+}
+.race-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+  min-width: 62px;
+}
+.race-col b {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.race-col i {
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.34);
+}
+
+/* Detail header: back out of one race into the archive. */
+.race-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 2px 12px;
+}
+.race-back {
+  flex-shrink: 0;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 6px 11px;
+  cursor: pointer;
+}
+.race-back:hover { color: #fff; background: rgba(255, 255, 255, 0.11); }
+.race-head-title {
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+.race-head-meta {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Classification rows */
+.race-pos {
+  flex-shrink: 0;
+  width: 34px;
+  font-size: 12px;
+  font-weight: 800;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.race-time {
+  margin-left: auto;
+  padding-right: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* A retirement is a fact about the race, not a failure state to shout about. */
+.race-dnf { opacity: 0.55; }
+.race-dnf .race-time { color: rgba(255, 255, 255, 0.45); }
+
+.race-pb {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #0a0a0a;
+  background: var(--gold, #ffcf3f);
+  border-radius: 2px;
+  padding: 1px 4px;
+  vertical-align: 2px;
+}

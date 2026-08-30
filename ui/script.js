@@ -21,6 +21,7 @@ let activeSort  = null;
 let lastData    = [];
 let filterText  = '';
 let openRow     = null;   // key of the expanded row
+let openRaceId  = null;   // Races tab: the race whose classification is open
 let myName      = '';
 let meTrack       = 'ALL';   // My-stats chart filter
 let meTrackSearch = '';      // track-list search text
@@ -45,6 +46,7 @@ const ICONS = {
   me:        ico('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
   rivals:    ico('<path d="M16 3h5v5"/><path d="M8 21H3v-5"/><path d="M21 3 14 10"/><path d="m3 21 7-7"/><path d="M8 3H3v5"/><path d="m3 3 7 7"/><path d="M16 21h5v-5"/><path d="m21 21-7-7"/>'),
   duels:     ico('<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="M19 21 21 19"/><path d="M9.5 6.5 21 18v3h-3L6.5 9.5"/>'),
+  races:     ico('<path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.3 2q2 0 3.1-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.5"/>'),
   caret:     ico('<polyline points="6 9 12 15 18 9"/>'),
 };
 
@@ -52,6 +54,17 @@ const ICONS = {
 // `sorts` mirror the reference's Rank / Win Rate / KDA segment: each one is a
 // column of the loaded rows, sorted highest-first.
 const TABS = {
+  races: {
+    label: 'Races',
+    title: 'Race archive',
+    sub: 'Every race that has been run, newest first. Open one for its full classification.',
+    unit: 'Races',
+    sorts: [
+      { key: '_recent',      label: 'Recent'  },
+      { key: 'player_count', label: 'Drivers' },
+      { key: 'duration_ms',  label: 'Length'  },
+    ],
+  },
   standings: {
     label: 'Standings',
     title: 'Global standings',
@@ -122,8 +135,8 @@ const TABS = {
   },
 };
 
-const LIST_TABS = ['standings', 'classes', 'records', 'rivals', 'duels', 'activity', 'me'];
-const SEARCHABLE = { standings: true, classes: true, records: true, duels: true };
+const LIST_TABS = ['standings', 'classes', 'records', 'races', 'rivals', 'duels', 'activity', 'me'];
+const SEARCHABLE = { standings: true, classes: true, records: true, duels: true, races: true };
 const HAS_PODIUM = { standings: true, classes: true };
 
 // ── Small helpers ────────────────────────────────────────────────────────────
@@ -166,13 +179,13 @@ function timeSeconds(t) {
 function rowKey(r, i) { return String(r.player_id || r.id || r.name || r.track_name || r.track || i); }
 
 // ── NUI fetch ────────────────────────────────────────────────────────────────
-async function fetchTab(tab, cls) {
-  if (!inNui()) return MOCK[tab] || [];
+async function fetchTab(tab, cls, raceId) {
+  if (!inNui()) return raceId ? (MOCK.raceDetail || null) : (MOCK[tab] || []);
   try {
     const res = await fetch(`https://${RES()}/lbFetch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tab, class: cls }),
+      body: JSON.stringify({ tab, class: cls, raceId }),
     });
     return await res.json();
   } catch (e) { return []; }
@@ -215,7 +228,7 @@ function sortRows(rows) {
       case '_class':  return String(r.car_class || r.class || '').toLowerCase();
       // Rivals: biggest gap first, either direction. Duels: same idea.
       case '_margin': return Math.abs(num(r.margin != null ? r.margin : r.margin_ms));
-      case '_recent': return Date.parse(String(r.settled_at || r.created_at || '').replace(' ', 'T')) || 0;
+      case '_recent': return Date.parse(String(r.settled_at || r.raced_at || r.created_at || '').replace(' ', 'T')) || 0;
       default:       return num(r[spec.key]);
     }
   };
@@ -1049,6 +1062,7 @@ function pct(v, max) { return max > 0 ? Math.max(3, Math.min(100, (num(v) / max)
 function isMine(name) { return !!myName && String(name).toLowerCase() === myName.toLowerCase(); }
 
 const RENDER = {
+  races:     renderRaces,
   standings: renderStandings,
   classes:   renderClasses,
   records:   renderRecords,
@@ -1058,11 +1072,122 @@ const RENDER = {
   me:        renderMe,
 };
 
+// ── Race archive ─────────────────────────────────────────────────────────────
+// Two views behind one tab: the list of races, and one race's classification.
+// `openRaceId` decides which, so going back is just clearing it.
+
+// 214500 → "3:34.5" — a race duration, not a lap, so tenths are enough.
+function msToDuration(ms) {
+  const n = num(ms);
+  if (n <= 0) return '—';
+  const m = Math.floor(n / 60000);
+  const sec = (n % 60000) / 1000;
+  return `${m}:${sec.toFixed(1).padStart(4, '0')}`;
+}
+
+// "2026-08-30 18:22:41" → "30 Aug, 18:22". Never throws on a malformed value:
+// the archive is the one screen that must render whatever the DB holds.
+function whenLabel(v) {
+  const raw = String(v || '').replace(' ', 'T');
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return String(v || '—').slice(0, 16);
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${d.getDate()} ${MON[d.getMonth()]}, ${hh}:${mm}`;
+}
+
+function renderRaces(rows) {
+  if (!rows.length) {
+    return { head: '', html: emptyState('No races have been run yet.'), podium: '' };
+  }
+
+  const html = rows.map((r, i) => {
+    const key = String(r.race_id || i);
+    // A race where everyone retired has no winner — say so rather than
+    // rendering an empty name cell.
+    const winner = r.winner || null;
+    const type = String(r.track_type || 'circuit').toUpperCase();
+
+    return `<div class="row" data-key="${esc(key)}" data-race="${esc(r.race_id || '')}">
+      <div class="row-main">
+        ${avatar(winner || r.track || '?', r.winner_avatar)}
+        <div class="who"><div class="who-txt">
+          <div class="nm">${esc(r.track || 'Unknown track')}</div>
+          <div class="meta">${esc(whenLabel(r.raced_at))} · ${esc(type)} · ${num(r.laps) || 1} lap${(num(r.laps) || 1) === 1 ? '' : 's'} · Class ${esc(r.car_class || '?')}</div>
+        </div></div>
+        <div class="race-cols">
+          <span class="race-col"><b>${winner ? esc(winner) : '—'}</b><i>Winner</i></span>
+          <span class="race-col"><b>${fmtNum(r.player_count)}</b><i>Drivers</i></span>
+          <span class="race-col"><b>${esc(msToDuration(r.duration_ms))}</b><i>Length</i></span>
+        </div>
+        <div class="caret">${ICONS.caret}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return { head: '', html, podium: '' };
+}
+
+// One race, in full. Finishers in position order, then anyone who retired.
+function renderRaceDetail(d) {
+  const entries = Array.isArray(d.entries) ? d.entries : [];
+  const type = String(d.track_type || 'circuit').toUpperCase();
+
+  const head = `<div class="race-head">
+    <button class="race-back" id="raceBack">← All races</button>
+    <div class="race-head-main">
+      <div class="race-head-title">${esc(d.track || 'Unknown track')}</div>
+      <div class="race-head-meta">${esc(whenLabel(d.raced_at))} · ${esc(type)} · ${num(d.laps) || 1} lap${(num(d.laps) || 1) === 1 ? '' : 's'} · Class ${esc(d.car_class || '?')} · ${fmtNum(d.player_count)} drivers · ${esc(msToDuration(d.duration_ms))}</div>
+    </div>
+  </div>`;
+
+  if (!entries.length) {
+    return { head, html: emptyState('No classification stored for this race.'), podium: '' };
+  }
+
+  const html = entries.map((e, i) => {
+    const key = String(e.player_id || i);
+    const posLabel = e.dnf ? 'DNF' : `P${e.position != null ? e.position : '?'}`;
+    // Winner shows their time; everyone else the gap to it, which is the
+    // number people actually compare.
+    const timeLabel = e.dnf
+      ? (e.dnf_reason ? String(e.dnf_reason).toUpperCase() : 'RETIRED')
+      : (e.gap_ms ? `+${(e.gap_ms / 1000).toFixed(2)}` : msToLap(e.finish_time));
+
+    return `<div class="row ${openRow === key ? 'open' : ''}${e.dnf ? ' race-dnf' : ''}" data-key="${esc(key)}" data-name="${esc(e.name || '')}">
+      <div class="row-main">
+        <span class="race-pos">${esc(posLabel)}</span>
+        ${avatar(e.name, e.avatar)}
+        <div class="who"><div class="who-txt">
+          <div class="nm">${esc(e.name || 'Racer')}${e.personal_best ? ' <span class="race-pb">PB</span>' : ''}</div>
+          <div class="meta">Best lap ${esc(msToLap(e.best_lap))}</div>
+        </div></div>
+        <span class="race-time">${esc(timeLabel)}</span>
+        <div class="caret">${ICONS.caret}</div>
+      </div>
+      ${detailCards([
+        ['Finish time', e.dnf ? null : msToLap(e.finish_time)],
+        ['Gap', e.dnf || !e.gap_ms ? null : `+${(e.gap_ms / 1000).toFixed(2)}`],
+        ['Best lap', msToLap(e.best_lap)],
+        ['Points', e.points_earned],
+        ['XP', e.xp_earned],
+        ['iRating', e.irating_change ? (e.irating_change > 0 ? `+${e.irating_change}` : String(e.irating_change)) : null],
+        ['Safety', e.sr_change ? (e.sr_change > 0 ? `+${e.sr_change.toFixed(2)}` : e.sr_change.toFixed(2)) : null],
+        ['Retired', e.dnf ? (e.dnf_reason || 'Unknown') : null],
+      ])}
+    </div>`;
+  }).join('');
+
+  return { head, html, podium: '' };
+}
+
 // ── Filtering + paint ────────────────────────────────────────────────────────
 function matches(r, f) {
   if (!f) return true;
   let hay;
-  if (activeTab === 'records')     hay = `${r.track_name || r.track || ''} ${r.player_name || r.holder || ''}`;
+  if (activeTab === 'races')       hay = `${r.track || ''} ${r.winner || ''} ${r.car_class || ''}`;
+  else if (activeTab === 'records') hay = `${r.track_name || r.track || ''} ${r.player_name || r.holder || ''}`;
   else if (activeTab === 'duels')  hay = `${r.challenger || ''} ${r.opponent || ''} ${r.track || ''}`;
   else                             hay = (r.name || r.player || r.title || '');
   return hay.toLowerCase().includes(f);
@@ -1099,6 +1224,19 @@ function renderCurrent() {
     return;
   }
 
+  // Races: an array is the archive list, an object is one race's classification.
+  if (activeTab === 'races' && !Array.isArray(lastData)) {
+    const out = renderRaceDetail(lastData || {});
+    podiumEl.innerHTML = '';
+    body.innerHTML = out.head + out.html;
+    heroTitle.textContent = lastData && lastData.track ? lastData.track : tab.title;
+    heroSub.textContent = 'Full classification.';
+    heroCount.textContent = fmtNum((lastData && lastData.entries || []).length);
+    chipbar.innerHTML = '';
+    searchCount.textContent = '';
+    return;
+  }
+
   if (!Array.isArray(lastData)) {                       // My stats is an object
     const out = RENDER[activeTab](lastData);
     podiumEl.innerHTML = '';
@@ -1126,14 +1264,20 @@ async function loadTab() {
   buildNav();
   buildSorts();
   classGroup.classList.toggle('hidden', activeTab !== 'classes');
-  document.querySelector('.search').classList.toggle('hidden', !SEARCHABLE[activeTab]);
+
+  // Inside a single race the list chrome does not apply: there is nothing to
+  // sort a classification by (it IS the order) and nothing to search within
+  // five rows. Both come back when you go back to the archive.
+  const inRaceDetail = activeTab === 'races' && !!openRaceId;
+  document.querySelector('.search').classList.toggle('hidden', !SEARCHABLE[activeTab] || inRaceDetail);
+  if (inRaceDetail) sortSeg.style.display = 'none';
   // "Show my place" only means something on a ranked list.
-  document.getElementById('myPlaceBtn').classList.toggle('hidden', activeTab === 'me');
+  document.getElementById('myPlaceBtn').classList.toggle('hidden', activeTab === 'me' || activeTab === 'races');
   openRow = null;
   podiumEl.innerHTML = '';
   body.innerHTML = `<div class="state"><div class="spinner"></div><span>Loading telemetry…</span></div>`;
 
-  lastData = await fetchTab(activeTab, activeClass);
+  lastData = await fetchTab(activeTab, activeClass, activeTab === 'races' ? openRaceId : null);
   renderCurrent();
 }
 
@@ -1206,6 +1350,22 @@ body.addEventListener('input', e => {
   focusTrackSearch();
 });
 
+// Races: a row opens that race's classification; the back button clears it.
+// Registered BEFORE the generic row-expand handler so opening a race does not
+// also toggle the row it was clicked on.
+body.addEventListener('click', e => {
+  if (e.target.closest('#raceBack')) {
+    openRaceId = null;
+    loadTab();
+    return;
+  }
+  const card = e.target.closest('[data-race]');
+  if (card && activeTab === 'races' && Array.isArray(lastData)) {
+    openRaceId = card.dataset.race;
+    if (openRaceId) loadTab();
+  }
+});
+
 // Row expand / collapse — one open at a time, like the reference.
 body.addEventListener('click', e => {
   const main = e.target.closest('.row-main'); if (!main) return;
@@ -1274,6 +1434,15 @@ window.addEventListener('message', e => {
   const m = e.data || {};
   if (m.action === 'open') {
     if (m.player) setMe(m.player);
+    // Opened straight from a finished race: land on that race's classification
+    // instead of making the player find it in the archive.
+    if (m.tab && TABS[m.tab]) {
+      activeTab = m.tab;
+      activeSort = null;
+      filterText = '';
+      searchInput.value = '';
+    }
+    openRaceId = m.raceId || null;
     root.classList.remove('hidden');
     loadTab();
   }
@@ -1283,6 +1452,22 @@ window.addEventListener('message', e => {
 
 // ── Browser preview mock ─────────────────────────────────────────────────────
 const MOCK = {
+  races: [
+    { race_id: 'R4821', track: 'Downtown Grand Prix', track_type: 'circuit', car_class: 'A', laps: 3, player_count: 8, duration_ms: 642300, raced_at: '2026-08-30 18:22:41', winner: 'SPICEZ' },
+    { race_id: 'R4820', track: 'Vinewood Hills Sprint', track_type: 'sprint', car_class: 'B', laps: 1, player_count: 6, duration_ms: 318900, raced_at: '2026-08-30 17:58:02', winner: 'Ghost' },
+    { race_id: 'R4819', track: 'Docks Lines', track_type: 'circuit', car_class: 'S', laps: 2, player_count: 11, duration_ms: 511400, raced_at: '2026-08-30 17:31:19', winner: null },
+  ],
+  raceDetail: {
+    race_id: 'R4821', track: 'Downtown Grand Prix', track_type: 'circuit', car_class: 'A',
+    laps: 3, player_count: 8, duration_ms: 642300, raced_at: '2026-08-30 18:22:41',
+    entries: [
+      { position: 1, player_id: 1, name: 'SPICEZ',      finish_time: 214500, best_lap: 71200, gap_ms: 0,     points_earned: 25, xp_earned: 350, irating_change: 32,  sr_change: 0.12, personal_best: true,  dnf: false },
+      { position: 2, player_id: 2, name: 'DRIFT_KING',  finish_time: 215750, best_lap: 71900, gap_ms: 1250,  points_earned: 18, xp_earned: 280, irating_change: 11,  sr_change: 0.04, personal_best: false, dnf: false },
+      { position: 3, player_id: 3, name: 'SHADOW_GRID', finish_time: 217920, best_lap: 72400, gap_ms: 3420,  points_earned: 15, xp_earned: 240, irating_change: -4,  sr_change: -0.02, personal_best: false, dnf: false },
+      { position: 4, player_id: 4, name: 'NIGHT_OWL',   finish_time: 223270, best_lap: 73800, gap_ms: 8770,  points_earned: 12, xp_earned: 200, irating_change: -12, sr_change: 0.01, personal_best: false, dnf: false },
+      { position: null, player_id: 5, name: 'REDLINE',  finish_time: null,   best_lap: 74100, points_earned: 0, xp_earned: 40, irating_change: -21, sr_change: -0.30, personal_best: false, dnf: true, dnf_reason: 'disconnect' },
+    ],
+  },
   standings: [
     { rank: 1, name: 'SPICEZ', avatar: 'https://cdn.discordapp.com/embed/avatars/0.png',   tier: 'S', rank_title: 'Legend', level: 24, iRating: 1840, sr: 3.42, points: 12500, total_races: 60, wins: 42, podiums: 51, dnfs: 0, win_rate: 0.70, avg_position: 1.8, playtime: 180000, last_track: 'Downtown GP', last_race_at: 1787000000, joined_at: '2026-01-14' },
     { rank: 2, name: 'ItzSteve', avatar: 'https://cdn.discordapp.com/embed/avatars/1.png', tier: 'A', rank_title: 'Pro',    level: 18, iRating: 1620, sr: 2.98, points: 9800,  total_races: 55, wins: 24, podiums: 38, dnfs: 1, win_rate: 0.61, avg_position: 2.5, playtime: 158000, last_track: 'Route 68', last_race_at: 1786910000, joined_at: '2026-02-14' },
