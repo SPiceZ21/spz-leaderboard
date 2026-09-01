@@ -15,6 +15,7 @@ AddEventHandler('SPZ:themeUpdated', function(theme) pushLeaderboardTheme(theme) 
 
 -- Default binding, declared once so the key registered here and the key the
 -- race HUD prints are the same value.
+-- Registry: Docs/keybinds.md
 local KEY_BOARD = "F6"
 
 -- The race this player last finished. Set by spz-races when results land, so
