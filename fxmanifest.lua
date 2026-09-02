@@ -22,6 +22,7 @@ files {
     'ui/style.css',
     'ui/script.js',
     'ui/Assets/*.png',
+    'ui/Assets/ranks/*.svg',
     'ui/fonts/*.ttf',
 }
 
