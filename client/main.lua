@@ -48,6 +48,7 @@ local function openBoard(opts)
     if isOpen then return end
     isOpen = true
     SetNuiFocus(true, true)
+    pcall(function() exports['spz-core']:StartTablet() end)
 
     -- Name lets the UI mark and jump to the player's own row.
     local name = GetPlayerName(PlayerId())
@@ -67,6 +68,7 @@ local function closeBoard()
     if not isOpen then return end
     isOpen = false
     SetNuiFocus(false, false)
+    pcall(function() exports['spz-core']:StopTablet() end)
     SendNUIMessage({ action = "close" })
 end
 
