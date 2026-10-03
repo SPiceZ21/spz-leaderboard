@@ -126,6 +126,24 @@ RegisterNUICallback("lbClose", function(_, cb)
     cb("ok")
 end)
 
+-- ── Replays (spz-replay) ─────────────────────────────────────────────────────
+-- Optional: with spz-replay stopped, the archive simply shows no replay buttons.
+local function replayIds(raceIds)
+    if GetResourceState("spz-replay") ~= "started" or #raceIds == 0 then return {} end
+    return lib.callback.await("spz-replay:hasReplays", false, raceIds) or {}
+end
+
+RegisterNUICallback("lbWatchReplay", function(data, cb)
+    if GetResourceState("spz-replay") ~= "started" then
+        cb({ ok = false, error = "Replays are offline." })
+        return
+    end
+    closeBoard()
+    local ok, err = exports["spz-replay"]:WatchRace(data.raceId)
+    if not ok then lib.notify({ title = "Replays", description = err or "Couldn't open that replay.", type = "error" }) end
+    cb({ ok = ok })
+end)
+
 -- NUI asks for a tab's data → we relay to spz-races leaderboard callbacks
 RegisterNUICallback("lbFetch", function(data, cb)
     local tab   = data.tab
@@ -148,10 +166,23 @@ RegisterNUICallback("lbFetch", function(data, cb)
 
     elseif tab == "races" then
         -- Archive list, or one race in full when the UI asks for a specific id.
+        -- Each race is tagged with has_replay when spz-replay stored one.
         if data.raceId then
-            lib.callback("spz-races:getRaceResults", false, function(r) cb(r or {}) end, { raceId = data.raceId })
+            lib.callback("spz-races:getRaceResults", false, function(r)
+                r = r or {}
+                local has = replayIds({ data.raceId })
+                r.has_replay = has[tostring(data.raceId)] == true
+                cb(r)
+            end, { raceId = data.raceId })
         else
-            lib.callback("spz-races:getRaceArchive", false, function(r) cb(r or {}) end, { limit = 40 })
+            lib.callback("spz-races:getRaceArchive", false, function(rows)
+                rows = rows or {}
+                local ids = {}
+                for i, r in ipairs(rows) do ids[i] = r.race_id end
+                local has = replayIds(ids)
+                for _, r in ipairs(rows) do r.has_replay = r.race_id ~= nil and has[tostring(r.race_id)] == true end
+                cb(rows)
+            end, { limit = 40 })
         end
 
     elseif tab == "activity" then

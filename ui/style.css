@@ -937,3 +937,38 @@ html, body { width: 100vw; height: 100vh; overflow: hidden; background: transpar
   padding: 1px 4px;
   vertical-align: 2px;
 }
+
+/* ── Replay buttons (spz-replay) ─────────────────────────────────────────── */
+.race-head-main { flex: 1; min-width: 0; }
+.replay-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 7px 13px;
+  cursor: pointer;
+  box-shadow: 0 0 14px var(--accent-glow);
+  transition: filter 0.12s ease, transform 0.12s ease;
+}
+.replay-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.replay-btn svg { width: 11px; height: 11px; fill: currentColor; stroke: none; }
+/* In the archive list: a quiet outlined chip that lights up on hover. */
+.replay-btn.sm {
+  font-size: 9px;
+  padding: 5px 9px;
+  margin-right: 6px;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
+  border-color: rgba(var(--accent-rgb), 0.35);
+  box-shadow: none;
+}
+.replay-btn.sm:hover { color: #fff; background: var(--accent); }

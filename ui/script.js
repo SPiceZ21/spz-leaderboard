@@ -48,6 +48,7 @@ const ICONS = {
   duels:     ico('<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="M19 21 21 19"/><path d="M9.5 6.5 21 18v3h-3L6.5 9.5"/>'),
   races:     ico('<path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.3 2q2 0 3.1-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.5"/>'),
   caret:     ico('<polyline points="6 9 12 15 18 9"/>'),
+  play:      ico('<polygon points="6 4 20 12 6 20 6 4"/>'),
 };
 
 // ── Tab definitions ──────────────────────────────────────────────────────────
@@ -1175,6 +1176,7 @@ function renderRaces(rows) {
           <span class="race-col"><b>${fmtNum(r.player_count)}</b><i>Drivers</i></span>
           <span class="race-col"><b>${esc(msToDuration(r.duration_ms))}</b><i>Length</i></span>
         </div>
+        ${r.has_replay ? `<button class="replay-btn sm" data-replay="${esc(r.race_id)}" title="Watch replay">${ICONS.play}<span>Replay</span></button>` : ''}
         <div class="caret">${ICONS.caret}</div>
       </div>
     </div>`;
@@ -1194,6 +1196,7 @@ function renderRaceDetail(d) {
       <div class="race-head-title">${esc(d.track || 'Unknown track')}</div>
       <div class="race-head-meta">${esc(whenLabel(d.raced_at))} · ${esc(type)} · ${num(d.laps) || 1} lap${(num(d.laps) || 1) === 1 ? '' : 's'} · Class ${esc(d.car_class || '?')} · ${fmtNum(d.player_count)} drivers · ${esc(msToDuration(d.duration_ms))}</div>
     </div>
+    ${d.has_replay && d.race_id ? `<button class="replay-btn" data-replay="${esc(d.race_id)}">${ICONS.play}<span>Watch replay</span></button>` : ''}
   </div>`;
 
   if (!entries.length) {
@@ -1407,6 +1410,21 @@ body.addEventListener('input', e => {
 });
 
 // Races: a row opens that race's classification; the back button clears it.
+// Replay buttons: capture phase, so neither the row expand nor the open-race
+// handler below sees the click.
+body.addEventListener('click', e => {
+  const btn = e.target.closest('[data-replay]');
+  if (!btn) return;
+  e.stopPropagation();
+  e.preventDefault();
+  if (!inNui()) return;
+  fetch(`https://${RES()}/lbWatchReplay`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ raceId: btn.dataset.replay }),
+  }).catch(() => {});
+}, true);
+
 // Registered BEFORE the generic row-expand handler so opening a race does not
 // also toggle the row it was clicked on.
 body.addEventListener('click', e => {
