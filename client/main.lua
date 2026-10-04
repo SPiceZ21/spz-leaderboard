@@ -45,6 +45,7 @@ local function freshRaceOpts()
 end
 
 local function openBoard(opts)
+    TriggerEvent("spz-analytics:feature", "leaderboard_open")   -- no-op without spz-analytics
     if isOpen then return end
     isOpen = true
     SetNuiFocus(true, true)
