@@ -77,8 +77,9 @@ end
 -- otherwise the leaderboard as it always opened.
 RegisterCommand("leaderboard", function() openBoard(freshRaceOpts()) end, false)
 
--- Straight to the race you just drove. Called by spz-races from the post-race
--- prompt; falls back to the plain board if no race has finished this session.
+-- Straight to the race you just drove. Called by spz-raceUI's post-race stats
+-- screen ([Enter]); falls back to the plain board if no race has finished this
+-- session (the race id arrives with SPZ:raceEnd, once the whole field is done).
 -- Explicit results command: ignores the freshness window, because asking for
 -- results by name means you want them however long ago the race was.
 RegisterCommand("raceresults", function()
