@@ -23,6 +23,9 @@ files {
     'ui/script.js',
     'ui/Assets/*.png',
     'ui/Assets/ranks/*.svg',
+    'ui/rankup.css',
+    'ui/rankup.js',
+    'ui/Assets/rankfx/*.webm',
     'ui/fonts/*.ttf',
 }
 

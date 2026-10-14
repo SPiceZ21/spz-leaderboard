@@ -211,3 +211,21 @@ RegisterNUICallback("lbFetch", function(data, cb)
         cb({})
     end
 end)
+
+-- ── Rank-up animation ───────────────────────────────────────────────────────
+-- spz-progression fires this on every rank change; promotions get the
+-- Blender build-up (ui/rankup.js, Assets/rankfx). It plays over gameplay
+-- without taking focus.
+RegisterNetEvent("SPZ:rankChanged", function(d)
+    if type(d) ~= "table" or not d.isPromotion then return end
+    SendNUIMessage({ action = "rankUp", oldRank = d.oldRank, newRank = d.newRank, isPromotion = true })
+    PlaySoundFrontend(-1, "RANK_UP", "HUD_AWARDS", true)
+end)
+
+-- /rankuptest <old> <new> — preview either animation:
+--   /rankuptest B-5 A-1   tier change: full build
+--   /rankuptest A-2 A-3   same tier:   the new bar lights up
+RegisterCommand("rankuptest", function(_, args)
+    SendNUIMessage({ action = "rankUp", oldRank = args[1] or "B-5", newRank = args[2] or "A-1", isPromotion = true })
+    PlaySoundFrontend(-1, "RANK_UP", "HUD_AWARDS", true)
+end, false)
