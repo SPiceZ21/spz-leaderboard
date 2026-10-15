@@ -26,6 +26,8 @@ files {
     'ui/rankup.css',
     'ui/rankup.js',
     'ui/Assets/rankfx/*.webm',
+    'ui/Assets/rankfx/*.png',
+    'ui/Assets/rankfx/*.json',
     'ui/fonts/*.ttf',
 }
 

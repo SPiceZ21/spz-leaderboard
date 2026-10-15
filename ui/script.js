@@ -173,11 +173,43 @@ const RANK_FILES = (() => {
 
 // "S-3" / "s3" → "Assets/ranks/RANKS3.svg", or null when the rank has no art
 // (an unranked / D-tier profile, or a value the DB has never seen).
-function rankAsset(rank) {
+// Badges use the Blender renders (Assets/rankfx/<RANK>.png — the 3D glass
+// badge with its earned bars lit; built by _source/rankfx). The flat SVG in
+// Assets/ranks is the fallback if a render is missing.
+function rankFile(rank) {
   const m = /^\s*([SABC])\s*-?\s*([1-5])\s*$/i.exec(String(rank || ''));
-  if (!m) return null;
-  const file = RANK_FILES[m[1].toUpperCase() + m[2]];
+  return m ? RANK_FILES[m[1].toUpperCase() + m[2]] || null : null;
+}
+function rankAsset(rank) {
+  const file = rankFile(rank);
+  return file ? `Assets/rankfx/${file}.png` : null;
+}
+function rankSvg(rank) {
+  const file = rankFile(rank);
   return file ? `Assets/ranks/${file}.svg` : null;
+}
+
+// Where the badge sits inside the full idle video frame (Assets/rankfx/crop.json,
+// written by _source/rankfx/stills.py), so the live video can be cropped to the
+// same framing as the stills.
+let RANK_CROP = { x: 0.2, y: 0.25, w: 0.6, h: 0.5 };
+fetch('Assets/rankfx/crop.json').then((r) => r.json()).then((c) => { if (c && c.w) RANK_CROP = c; }).catch(() => {});
+
+// The big "current rank" badge: the live 3D idle loop, cropped to the badge.
+// Width in px; the height follows the badge's aspect.
+function rankVideo(rank, width) {
+  const file = rankFile(rank);
+  if (!file) return '';
+  const c = RANK_CROP;
+  const FRAME_W = 1280, FRAME_H = 1152;                 // rendered video size
+  const vw = width / c.w;                               // whole video, scaled so the badge = width
+  const vh = vw * FRAME_H / FRAME_W;
+  const h = Math.round(c.h * vh);
+  return `<span class="rank-vid" style="width:${width}px;height:${h}px">
+    <video src="Assets/rankfx/${file}_idle.webm" autoplay loop muted playsinline
+      style="width:${vw}px;height:${vh}px;left:${-c.x * vw}px;top:${-c.y * vh}px"
+      poster="Assets/rankfx/${file}.png"></video>
+  </span>`;
 }
 
 // The badge itself. Falls back to the lettered class chip when the profile has
@@ -189,8 +221,10 @@ function rankBadge(rank, tier, big) {
     const t = String(tier || label.charAt(0) || 'D').toUpperCase();
     return `<span class="chip ${esc(t)}">${esc(t)}</span>`;
   }
+  const svg = rankSvg(rank);
   return `<span class="rank-badge${big ? ' rb-lg' : ''}" title="${esc(label)}">
-    <img src="${esc(src)}" alt="${esc(label)}" draggable="false" loading="lazy" onerror="this.remove()">
+    <img src="${esc(src)}" alt="${esc(label)}" draggable="false" loading="lazy"
+      onerror="if(!this.dataset.f){this.dataset.f=1;this.src='${esc(svg)}'}else{this.remove()}">
   </span>`;
 }
 
@@ -1082,7 +1116,7 @@ function renderMe(data) {
   const rankArt = rankAsset(s.rank);
   const html = `
     ${rankArt ? `<div class="me-rank">
-      <span class="rank-badge rb-xl" title="${esc(String(s.rank))}"><img src="${esc(rankArt)}" alt="${esc(String(s.rank))}" draggable="false"></span>
+      <span class="rank-badge rb-xl" title="${esc(String(s.rank))}">${rankVideo(s.rank, 132)}</span>
       <div class="me-rank-txt">
         <div class="me-rank-v">${esc(String(s.rank))}</div>
         <div class="me-rank-l">Current rank · LVL ${num(s.level, 1)}</div>
