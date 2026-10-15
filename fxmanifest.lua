@@ -3,7 +3,7 @@ game 'gta5'
 
 name 'spz-leaderboard'
 description 'SPiceZ-Core — Leaderboard tablet UI (race results and archive, standings, classes, records, activity)'
-version '1.4.1'
+version '1.4.2'
 author 'SPiceZ-Core'
 lua54 'on'
 
