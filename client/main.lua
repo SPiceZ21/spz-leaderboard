@@ -90,6 +90,7 @@ exports("OpenLastRaceResults", function()
     openBoard(lastRaceId and { tab = "races", raceId = lastRaceId } or nil)
 end)
 RegisterKeyMapping("leaderboard", "Race results / leaderboard", "keyboard", KEY_BOARD)
+RegisterKeyMapping("leaderboard", "Race results / leaderboard (controller)", "PAD_DIGITALBUTTON", "SELECT_INDEX")
 
 -- Tell the race HUD which key opens results, so the in-race key strip prints it
 -- alongside the recovery keys. spz-races pushes its own keys the same way; this
@@ -98,7 +99,7 @@ RegisterKeyMapping("leaderboard", "Race results / leaderboard", "keyboard", KEY_
 CreateThread(function()
     while GetResourceState("spz-raceUI") ~= "started" do Wait(500) end
     pcall(function()
-        exports["spz-raceUI"]:SetKeyHints({ results = KEY_BOARD })
+        exports["spz-raceUI"]:SetKeyHints({ results = { cmd = "leaderboard", default = KEY_BOARD, pad = "SELECT_INDEX" } })
     end)
 end)
 
