@@ -73,6 +73,10 @@ local function closeBoard()
     SendNUIMessage({ action = "close" })
 end
 
+-- spz-tutorial closes whatever it opened when the tour moves on.
+AddEventHandler("spz-tutorial:closeUI", function() closeBoard() end)
+
+
 -- F6. Straight into the race you just drove when one has just finished,
 -- otherwise the leaderboard as it always opened.
 RegisterCommand("leaderboard", function() openBoard(freshRaceOpts()) end, false)
