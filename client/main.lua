@@ -221,10 +221,31 @@ end)
 -- spz-progression fires this on every rank change; promotions get the
 -- Blender build-up (ui/rankup.js, Assets/rankfx). It plays over gameplay
 -- without taking focus.
+--
+-- One race can move the rank twice: the race's own RP, then a flat bonus a
+-- moment later (perfect lap / track record, spz-progression GrantFlatRP). Each
+-- fires SPZ:rankChanged, which played two animations back to back (C-5 → C-4,
+-- then C-4 → C-3). Changes landing within MERGE_MS are folded into ONE
+-- animation from the first old rank to the latest new rank.
+local MERGE_MS = 2500
+local pending = nil      -- { oldRank, newRank, token }
+
 RegisterNetEvent("SPZ:rankChanged", function(d)
     if type(d) ~= "table" or not d.isPromotion then return end
-    SendNUIMessage({ action = "rankUp", oldRank = d.oldRank, newRank = d.newRank, isPromotion = true })
-    PlaySoundFrontend(-1, "RANK_UP", "HUD_AWARDS", true)
+    if pending then
+        pending.newRank = d.newRank            -- keep the first old rank
+    else
+        pending = { oldRank = d.oldRank, newRank = d.newRank }
+    end
+    local token = {}
+    pending.token = token
+    SetTimeout(MERGE_MS, function()
+        if not pending or pending.token ~= token then return end   -- a newer change extended the wait
+        local p = pending
+        pending = nil
+        SendNUIMessage({ action = "rankUp", oldRank = p.oldRank, newRank = p.newRank, isPromotion = true })
+        PlaySoundFrontend(-1, "RANK_UP", "HUD_AWARDS", true)
+    end)
 end)
 
 -- /rankuptest <old> <new> — preview either animation:
