@@ -9,13 +9,16 @@ lua54 'on'
 
 shared_script '@ox_lib/init.lua'
 
-client_script 'client/main.lua'
+client_scripts {
+    '@spz-hud/shim.lua',   -- NUI goes through spz-hud
+    'client/main.lua',
+}
 
 exports {
     'OpenLastRaceResults',
 }
 
-ui_page 'ui/index.html'
+-- ui_page 'ui/index.html'  -- drawn by spz-hud now (web/public/apps/spz-leaderboard); uncomment + drop the shim to roll back
 
 files {
     'ui/index.html',
@@ -32,6 +35,7 @@ files {
 }
 
 dependencies {
+    'spz-hud',
     'ox_lib',
     'spz-core',
     'spz-races',
