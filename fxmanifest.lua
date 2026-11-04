@@ -20,19 +20,8 @@ exports {
 
 -- ui_page 'ui/index.html'  -- drawn by spz-hud now (web/public/apps/spz-leaderboard); uncomment + drop the shim to roll back
 
-files {
-    'ui/index.html',
-    'ui/style.css',
-    'ui/script.js',
-    'ui/Assets/*.png',
-    'ui/Assets/ranks/*.svg',
-    'ui/rankup.css',
-    'ui/rankup.js',
-    'ui/Assets/rankfx/*.webm',
-    'ui/Assets/rankfx/*.png',
-    'ui/Assets/rankfx/*.json',
-    'ui/fonts/*.ttf',
-}
+-- UI files are not shipped from here: spz-hud serves this resource's page
+-- (synced from ui/ by spz-hud/tools/sync-apps.mjs).
 
 dependencies {
     'spz-hud',
